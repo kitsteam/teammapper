@@ -117,6 +117,14 @@ TeamMapper is based on mindmapp (https://github.com/cedoor/mindmapp , discontinu
 
 -   Once this docker volume is initialized after the first `docker-compose up`, the database-related variables in `.env.prod` will not have any effect; please have this in mind => you will then need to setup your database manually
 
+### Content Security Policy
+
+You can use a content security policy to restrict which resources are being loaded. The app is completely self contained, so you can use quite strict policies. For nginx, this would look like this:
+
+```
+add_header Content-Security-Policy "default-src 'self' connect-src 'self' ws: wss: img-src 'self' data:; style-src 'self' 'unsafe-inline'" always;
+```
+
 ## Contributing
 
 1. Fork it
