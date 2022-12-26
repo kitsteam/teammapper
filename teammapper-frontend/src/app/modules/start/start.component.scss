@@ -1,6 +1,6 @@
 $kits-main-color: rgb(0, 163, 211);
 $font-grey: rgb(33, 37, 41);
-$button-color: #00456f;
+$button-color: rgb(0, 69, 111);
 
 .min-vh-100 {
   min-height: 100vh;
@@ -21,6 +21,11 @@ $button-color: #00456f;
   align-items: center;
   padding: 2px 2px 2px 2px;
   font-family: FiraSans;
+  font-size: 16px !important;
+}
+
+.margin-bottom-10 {
+  margin-bottom: 15px;
 }
 
 .list-border {

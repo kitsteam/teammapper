@@ -17,10 +17,10 @@ export class StartComponent {
   }
 
   ngOnInit() {
-    this.breakpoint = (window.innerWidth <= 600) ? 1 : 2;
+    this.breakpoint = (window.innerWidth <= 990) ? 1 : 2;
   }
 
   onResize(event: Event) {
-    this.breakpoint = ((event.target as Window).innerWidth <= 600) ? 1 : 2;
+    this.breakpoint = ((event.target as Window).innerWidth <= 990) ? 1 : 2;
   }
 }
