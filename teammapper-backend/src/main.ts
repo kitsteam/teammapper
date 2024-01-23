@@ -1,15 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import AppModule from './app.module';
 import configService from './config.service';
-const { createProxyMiddleware } = require('http-proxy-middleware');
+import { createProxyMiddleware } from 'http-proxy-middleware';
+import { NestExpressApplication } from '@nestjs/platform-express'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.use("/arasaac/api", createProxyMiddleware({
     target: 'https://api.arasaac.org/api',
     changeOrigin: true,
-    logger: console
+    pathRewrite: {
+      "^/arasaac/api": "/",
+    },
+  }));
+
+  app.use("/arasaac/images", createProxyMiddleware({
+    target: 'https://static.arasaac.org/',
+    changeOrigin: true,
+    pathRewrite: {
+      "^/arasaac/images": "/",
+    },
   }));
 
   await app.listen(configService.getPort());
