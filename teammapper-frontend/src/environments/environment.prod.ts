@@ -4,5 +4,5 @@ export const environment = {
   name: 'TeamMapper',
   pictogramApiUrl: '/arasaac/api/pictograms',
   pictogramStaticUrl: '/arasaac/images/pictograms',
-  featureFlagPictograms: false,
+  featureFlagPictograms: true,
 };
