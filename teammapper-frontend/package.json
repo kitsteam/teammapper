@@ -38,7 +38,7 @@
     "deploy": "ng deploy"
   },
   "dependencies": {
-    "@angular-devkit/build-angular": "18.2.12",
+    "@angular-devkit/build-angular": "18.2.14",
     "@angular/animations": "18.2.2",
     "@angular/cdk": "18.2.2",
     "@angular/cli": "18.2.2",
@@ -57,12 +57,12 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.1",
     "@material-design-icons/font": "^0.14.13",
     "@ngx-translate/core": "^16.0.3",
-    "@ngx-translate/http-loader": "^7.0.0",
+    "@ngx-translate/http-loader": "^16.0.1",
     "@types/uuid": "^10.0.0",
     "angular2-hotkeys": "^16.0.1",
     "d3": "7.6.1",
     "deep-object-diff": "^1.1.9",
-    "dompurify": "3.1.7",
+    "dompurify": "3.2.3",
     "jspdf": "^2.5.1",
     "localforage": "1.10.0",
     "ngx-color-picker": "^17.0.0",
@@ -76,7 +76,7 @@
   },
   "devDependencies": {
     "@angular-builders/jest": "^18.0.0",
-    "@angular-devkit/architect": "0.1802.11",
+    "@angular-devkit/architect": "0.1901.4",
     "@angular-devkit/core": "18.2.12",
     "@angular-devkit/schematics": "18.2.10",
     "@angular-eslint/builder": "18.3.0",
@@ -96,7 +96,7 @@
     "@types/node": "^22.10.5",
     "@typescript-eslint/eslint-plugin": "^8.2.0",
     "@typescript-eslint/parser": "^8.4.0",
-    "angular-eslint": "^18.3.1",
+    "angular-eslint": "^19.0.2",
     "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^28.10.0",
@@ -109,7 +109,7 @@
     "prettier": "^3.3.3",
     "ts-node": "~10.9.2",
     "typescript": "~5.4.3",
-    "typescript-eslint": "^8.8.1"
+    "typescript-eslint": "^8.20.0"
   },
   "optionalDependencies": {
     "@nx/nx-darwin-arm64": "20.3.0",
