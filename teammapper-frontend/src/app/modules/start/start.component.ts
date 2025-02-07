@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
   selector: 'teammapper-start',
   templateUrl: './start.component.html',
   styleUrls: ['./start.component.scss'],
+  standalone: false,
 })
 export class StartComponent implements OnInit {
   public projectName: string;

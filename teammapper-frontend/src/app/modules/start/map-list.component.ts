@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
   selector: 'teammapper-map-list',
   templateUrl: './map-list.component.html',
   styleUrls: ['./map-list.component.scss'],
+  standalone: false,
 })
 export class MapListComponent implements OnInit {
   public cachedAdminMapEntries: CachedAdminMapEntry[];
