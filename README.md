@@ -225,7 +225,7 @@ kits is a project platform hosted by a public institution for quality
 development in schools (Lower Saxony, Germany) and focusses on digital tools
 and media in language teaching. TeamMapper is used in workshops to activate
 prior knowledge, and collect and structure ideas. In addition, TeamMapper can
-be found on https://kits.blog/tools and can be used by schools for free.
+be found on https://kits.app and can be used by schools for free.
 
 Logos and text provided with courtesy of kits.
 
