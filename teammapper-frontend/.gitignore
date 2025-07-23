@@ -35,10 +35,14 @@ npm-debug.log
 testem.log
 /typings
 /.angular
+/.jest-cache
+
 
 # e2e
 /e2e/*.js
 /e2e/*.map
+/playwright
+/playwright-report
 
 # System Files
 .DS_Store
