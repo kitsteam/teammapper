@@ -6,17 +6,17 @@ import { test, expect } from '@playwright/test';
 
 test('creates a map and changes the location', async ({ page }) => {
   await page.goto('/');
-  await page.getByText('Create mind map').click();
+  await page.getByText('Mindmap erstellen').click();
   await expect(page.locator('.map').first()).toBeVisible();
-  await expect(page.getByText('Root node')).toBeVisible();
+  await expect(page.getByText('Thema')).toBeVisible();
 });
 
 test('adds a new node to the map that is saved and retrieved when reloaded', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByText('Create mind map').click();
-  await expect(page.getByText('Root node')).toBeVisible();
+  await page.getByText('Mindmap erstellen').click();
+  await expect(page.getByText('Thema')).toBeVisible();
   await page.locator("button[title='Adds a node']").first().click();
   await page.keyboard.type('New Node');
   // End editing by clicking somewhere else
