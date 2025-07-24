@@ -28,7 +28,7 @@
   "main": "app.js",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --host $BINDING",
+    "start": "ng serve --host $BINDING --disable-host-check --ssl false",
     "test": "ng test",
     "tsc": "npx tsc -p ./tsconfig.json",
     "build:packages": "npm install --workspace=packages && npm run build --workspace=packages",
@@ -39,7 +39,7 @@
     "deploy": "ng deploy"
   },
   "dependencies": {
-    "@angular-devkit/build-angular": "19.2.13",
+    "@angular-devkit/build-angular": "19.2.15",
     "@angular/animations": "19.2.1",
     "@angular/cdk": "19.2.1",
     "@angular/cli": "19.2.1",
@@ -100,7 +100,7 @@
     "@typescript-eslint/parser": "^8.4.0",
     "angular-eslint": "^19.2.1",
     "eslint": "^9.28.0",
-    "eslint-config-prettier": "^10.1.1",
+    "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-jest": "^28.10.0",
     "eslint-plugin-prettier": "^5.2.3",
     "globals": "^15.11.0",
@@ -111,44 +111,16 @@
     "prettier": "^3.3.3",
     "ts-node": "~10.9.2",
     "typescript": "~5.7.3",
-    "typescript-eslint": "^8.26.0"
+    "typescript-eslint": "^8.26.0",
+    "@playwright/test": "^1.53.1"
   },
   "optionalDependencies": {
-    "@nx/nx-darwin-arm64": "21.1.2",
+    "@nx/nx-darwin-arm64": "21.2.0",
     "@nx/nx-darwin-x64": "20.0.3",
     "@nx/nx-linux-x64-gnu": "19.8.2",
     "@nx/nx-win32-x64-msvc": "19.8.4"
   },
   "workspaces": [
     "packages/*"
-  ],
-  "jest": {
-    "preset": "jest-preset-angular",
-    "testPathIgnorePatterns": [
-      "node_modules/",
-      "dist/"
-    ],
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": ".",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "modulePaths": [
-      "<rootDir>"
-    ],
-    "moduleNameMapper": {
-      "@mmp/index": "<rootDir>/src/test/mocks/mmp-index.ts",
-      "@mmp/map/map": "<rootDir>/src/test/mocks/mmp-map.ts"
-    },
-    "setupFilesAfterEnv": [
-      "<rootDir>/setup-jest.ts"
-    ]
-  }
+  ]
 }
