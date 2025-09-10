@@ -23,11 +23,12 @@
   <div class="about-modal-section border-top">
     {{
       'MODALS.INFO.DELETE_AFTER_DAYS'
-        | translate : { deleteAfterDays: map.deleteAfterDays }
+        | translate: { deleteAfterDays: map.deleteAfterDays }
     }}
     <br /><br />
     {{ 'MODALS.INFO.DELETED_AT' | translate }}
-    {{ map.deletedAt | date : 'YYYY-MM-dd' }} <br />
+    {{ map.deletedAt | date: 'YYYY-MM-dd' }}<br />
+
     <br />
   </div>
 </mat-dialog-content>
