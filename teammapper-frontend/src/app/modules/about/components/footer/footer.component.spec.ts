@@ -20,6 +20,7 @@ describe('FooterComponent', () => {
       fontMaxSize: 16,
       fontMinSize: 12,
       fontIncrement: 2,
+      showLinktext: false,
     },
   };
 
@@ -38,7 +39,6 @@ describe('FooterComponent', () => {
     } as unknown as jest.Mocked<TranslateService>;
 
     await TestBed.configureTestingModule({
-      declarations: [FooterComponent],
       providers: [
         { provide: SettingsService, useValue: mockSettingsService },
         { provide: TranslateService, useValue: mockTranslateService },
@@ -50,6 +50,7 @@ describe('FooterComponent', () => {
         MatIconModule,
         MatSelectModule,
         BrowserAnimationsModule,
+        FooterComponent,
       ],
     }).compileComponents();
 
