@@ -2,12 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
 import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
 import { Router } from '@angular/router';
+import { MatListModule } from '@angular/material/list';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'teammapper-map-list',
   templateUrl: './map-list.component.html',
   styleUrls: ['./map-list.component.scss'],
-  standalone: false,
+  imports: [MatListModule, CommonModule],
 })
 export class MapListComponent implements OnInit {
   public cachedAdminMapEntries: CachedAdminMapEntry[];

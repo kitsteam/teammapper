@@ -5,6 +5,7 @@ import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
 import { Settings } from '../../../shared/models/settings.model';
 import { API_URL, HttpService } from '../../http/http.service';
 import { STORAGE_KEYS, StorageService } from '../storage/storage.service';
+import { environment } from 'src/environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -105,7 +106,7 @@ export class SettingsService {
   public async getDefaultSettings(): Promise<Settings> {
     const response = await this.httpService.get(
       API_URL.LOCAL_ASSETS,
-      'settings.json'
+      environment.settingsFilePath ?? 'settings.json'
     );
     return response.json();
   }
