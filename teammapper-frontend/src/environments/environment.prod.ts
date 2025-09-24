@@ -6,4 +6,5 @@ export const environment = {
   pictogramApiUrl: '/arasaac/api/pictograms',
   pictogramStaticUrl: '/arasaac/images/pictograms',
   featureFlagPictograms: true,
+  featureFlagAI: true,
 };
