@@ -7,9 +7,9 @@ Based on https://github.com/cedoor/mindmapp (discontinued)
 ## Setup
 
 ```
-npm install
+pnpm install
 
-npm run start
+pnpm run start
 ```
 
 ## Dev
@@ -17,6 +17,6 @@ npm run start
 ### Lint
 
 ```
-npx prettier --write src
-npm run lint -- --fix
+pnpm exec prettier --write src
+pnpm run lint -- --fix
 ```
