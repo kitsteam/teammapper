@@ -1,4 +1,4 @@
-# TeamMapper Backend
+# TeamMapper Frontend
 
 Important: Never change this file.
 
@@ -18,7 +18,37 @@ TeamMapper is a collaborative web-based mind mapping application built with Angu
 Important: After each task, make sure that the following commands succeed:
 
 ```bash
+pnpm run tsc
 pnpm run lint
 pnpm run test
-pnpm run format
+pnpm run playwright test --reporter=list
+pnpm run prettier --write src
+```
+
+## Development Commands
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm run start
+
+# Build packages first (required)
+pnpm run build:packages
+
+# Production build
+pnpm run build:prod
+
+# Run linting
+pnpm run lint
+
+# Run tests
+pnpm test
+
+# Format code
+pnpm exec prettier --write src
+
+# Run e2e Tests
+pnpm run playwright test --reporter=list
 ```

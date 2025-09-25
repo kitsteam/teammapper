@@ -29,12 +29,16 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+    - run: corepack enable
+    - run: corepack prepare pnpm@9 --activate
     - name: Install dependencies
-      run: npm run prepare:dev
+      run: pnpm install --frozen-lockfile
+    - name: Build packages
+      run: pnpm --filter @teammapper/mermaid-mindmap-parser run build
     - name: Install Playwright Browsers
-      run: cd teammapper-frontend && npx playwright install webkit --with-deps
+      run: pnpm --filter teammapper-frontend exec playwright install webkit --with-deps
     - name: Run Playwright tests
-      run: npm run migrate:dev && npm run test:e2e
+      run: pnpm run migrate:dev && pnpm run test:e2e
       env:
         POSTGRES_HOST: localhost
         POSTGRES_PORT: 5432
