@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
 import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
@@ -24,16 +24,16 @@ import { TranslatePipe } from '@ngx-translate/core';
   ],
 })
 export class StartComponent implements OnInit {
+  private settingsService = inject(SettingsService);
+  private router = inject(Router);
+
   public projectName: string;
   public faGithub = faGithub;
   public breakpoint: number;
   public height: number;
   public cachedAdminMapEntries: CachedAdminMapEntry[];
 
-  constructor(
-    private settingsService: SettingsService,
-    private router: Router
-  ) {
+  constructor() {
     this.breakpoint = 1;
     this.cachedAdminMapEntries = [];
   }

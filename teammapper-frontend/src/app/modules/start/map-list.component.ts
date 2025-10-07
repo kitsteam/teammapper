@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
 import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
 import { Router } from '@angular/router';
@@ -12,12 +12,12 @@ import { CommonModule } from '@angular/common';
   imports: [MatListModule, CommonModule],
 })
 export class MapListComponent implements OnInit {
+  private settingsService = inject(SettingsService);
+  private router = inject(Router);
+
   public cachedAdminMapEntries: CachedAdminMapEntry[];
 
-  constructor(
-    private settingsService: SettingsService,
-    private router: Router
-  ) {
+  constructor() {
     this.cachedAdminMapEntries = [];
   }
 
