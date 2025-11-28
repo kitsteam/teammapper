@@ -30,6 +30,7 @@ services:
       AI_LLM_RPM: ${DOCKER_COMPOSE_APP_ENV_AI_LLM_API_RPM}
       AI_LLM_TPM: ${DOCKER_COMPOSE_APP_ENV_AI_LLM_API_TPM}
       AI_LLM_TPD: ${DOCKER_COMPOSE_APP_ENV_AI_LLM_API_TPD}
+      JWT_SECRET: ${JWT_SECRET}
 
       TESTING_PLAYWRIGHT_WS_ENDPOINT: "ws://playwright:9323"
       TESTING_PLAYWRIGHT_BASE_URL: "http://app:4200"
@@ -40,8 +41,6 @@ services:
       - 9876:9876
     volumes:
       - .:/home/node/app
-      - app_backend_node_modules:/home/node/app/teammapper-backend/node_modules
-      - app_frontend_node_modules:/home/node/app/teammapper-frontend/node_modules
     depends_on:
       - postgres
 
@@ -60,7 +59,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/pgdata
 
   playwright:
-    image: mcr.microsoft.com/playwright:v1.55.0-noble
+    image: mcr.microsoft.com/playwright:v1.57.0-noble
     container_name: playwright
     depends_on:
       - app
