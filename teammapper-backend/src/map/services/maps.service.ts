@@ -86,6 +86,7 @@ export class MapsService {
           modificationSecret: map.modificationSecret,
           ttl: await this.getDeletedAt(map, configService.deleteAfterDays()),
           rootName: (await this.findRootNode(map.id))?.name || null,
+          createdAt: map.createdAt,
         }
       })
     )

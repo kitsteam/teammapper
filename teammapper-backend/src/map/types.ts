@@ -37,6 +37,7 @@ export interface IMmpClientMapInfo {
   adminId: string | null
   modificationSecret: string | null
   ttl: Date | undefined
+  createdAt: Date | null
   rootName: string | null
 }
 

@@ -137,6 +137,7 @@ interface ServerMapInfo {
   adminId: string | null;
   modificationSecret: string | null;
   ttl: string | null;
+  createdAt: string | null;
   rootName: string | null;
 }
 

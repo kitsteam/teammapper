@@ -443,6 +443,7 @@ export class MapSyncService implements OnDestroy {
     const mapEntries: CachedAdminMapEntry[] = json.map(map => ({
       id: map.uuid,
       cachedAdminMapValue: {
+        createdAt: map.createdAt ? new Date(map.createdAt) : null,
         adminId: map.adminId,
         modificationSecret: map.modificationSecret,
         ttl: map.ttl ? new Date(map.ttl) : new Date(),
