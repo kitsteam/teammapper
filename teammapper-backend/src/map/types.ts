@@ -100,8 +100,7 @@ export interface IMmpClientNodeAddRequest extends IMmpClientEditingRequest {
   nodes: IMmpClientNode[]
 }
 
-export interface IMmpClientUpdateMapOptionsRequest
-  extends IMmpClientEditingRequest {
+export interface IMmpClientUpdateMapOptionsRequest extends IMmpClientEditingRequest {
   options: IMmpClientMapOptions
 }
 
