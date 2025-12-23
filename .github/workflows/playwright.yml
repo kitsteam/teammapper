@@ -25,10 +25,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: actions/setup-node@v6
       with:
-        node-version: lts/*
+        node-version: '25'
     - run: corepack enable
     - run: corepack prepare pnpm@9 --activate
     - name: Install dependencies
@@ -49,7 +49,7 @@ jobs:
         POSTGRES_QUERY_TIMEOUT: 100000
         POSTGRES_STATEMENT_TIMEOUT: 100000
         BINDING: localhost
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v6
       if: ${{ !cancelled() }}
       with:
         name: playwright
