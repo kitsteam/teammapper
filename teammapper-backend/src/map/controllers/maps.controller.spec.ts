@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing'
 import MapsController from './maps.controller'
 import { MapsService } from '../services/maps.service'
+import { YjsDocManagerService } from '../services/yjs-doc-manager.service'
+import { YjsGateway } from './yjs-gateway.service'
 import { NotFoundException } from '@nestjs/common'
 import { MmpMap } from '../entities/mmpMap.entity'
 import { IMmpClientMap, IMmpClientPrivateMap, Request } from '../types'
@@ -32,6 +34,14 @@ describe('MapsController', () => {
             updateLastAccessed: jest.fn(),
             getMapsOfUser: jest.fn(),
           },
+        },
+        {
+          provide: YjsDocManagerService,
+          useValue: { destroyDoc: jest.fn() },
+        },
+        {
+          provide: YjsGateway,
+          useValue: { closeConnectionsForMap: jest.fn() },
         },
       ],
     }).compile()
@@ -131,7 +141,7 @@ describe('MapsController', () => {
     })
 
     it('should return an empty array when req is undefined', async () => {
-      const response = await mapsController.findAll(undefined)
+      const response = await mapsController.findAll()
       expect(response).toEqual([])
     })
   })
@@ -142,7 +152,7 @@ describe('MapsController', () => {
 
       jest.spyOn(mapsService, 'findMap').mockResolvedValueOnce(existingMap)
       // We're not interested in testing the repository at this stage, only if the request gets past the admin ID check
-      jest.spyOn(mapsService, 'deleteMap').mockImplementation(() => {})
+      jest.spyOn(mapsService, 'deleteMap').mockResolvedValue(undefined)
 
       await mapsController.delete(existingMap.id, {
         adminId: existingMap.adminId,

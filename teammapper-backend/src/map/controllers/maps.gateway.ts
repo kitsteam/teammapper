@@ -46,7 +46,8 @@ export class MapsGateway implements OnGatewayDisconnect {
   server: Server
 
   private readonly logger = new Logger(MapsService.name)
-  private readonly CACHE_TTL_MS = 10000
+  // 24 hours – entries are cleaned up explicitly on disconnect
+  private readonly CACHE_TTL_MS = 86_400_000
 
   constructor(
     private mapsService: MapsService,
@@ -142,7 +143,7 @@ export class MapsGateway implements OnGatewayDisconnect {
         request.mapId
       )
       if (mmpMap && mmpMap.adminId === request.adminId) {
-        this.mapsService.deleteMap(request.mapId)
+        await this.mapsService.deleteMap(request.mapId)
         this.server.to(request.mapId).emit('mapDeleted')
         return true
       }
@@ -763,7 +764,7 @@ export class MapsGateway implements OnGatewayDisconnect {
     color: string
   ): Promise<IClientCache> {
     client.join(mapId)
-    this.cacheManager.set(client.id, mapId, this.CACHE_TTL_MS)
+    await this.cacheManager.set(client.id, mapId, this.CACHE_TTL_MS)
     return await this.addClientForMap(mapId, client.id, color)
   }
 }
