@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { MmpService } from '../mmp/mmp.service';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import {
   CachedAdminMapEntry,
   CachedAdminMapValue,
@@ -39,19 +39,28 @@ import { UtilsService } from '../utils/utils.service';
 import { StorageService } from '../storage/storage.service';
 import { SettingsService } from '../settings/settings.service';
 import { ToastrService } from 'ngx-toastr';
-import { MapDiff } from '@mmp/map/handlers/history';
+import { MapDiff, SnapshotChanges } from '@mmp/map/handlers/history';
 import { ToastService } from '../toast/toast.service';
 import { DialogService } from '../dialog/dialog.service';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import {
+  ClientColorMapping,
+  ClientColorMappingValue,
+  populateYMapFromNodeProps,
+  yMapToNodeProps,
+  buildYjsWsUrl,
+  parseWriteAccessBytes,
+  resolveClientColor,
+  findAffectedNodes,
+  resolveMmpPropertyUpdate,
+  sortParentFirst,
+} from './yjs-utils';
 
 const DEFAULT_COLOR = '#000000';
 const DEFAULT_SELF_COLOR = '#c0c0c0';
-
-type ClientColorMapping = Record<string, ClientColorMappingValue>;
-
-interface ClientColorMappingValue {
-  nodeId: string;
-  color: string;
-}
+const WS_CLOSE_MAP_DELETED = 4001;
+const MESSAGE_WRITE_ACCESS = 4;
 
 type ServerClientList = Record<string, string>;
 
@@ -79,11 +88,29 @@ export class MapSyncService implements OnDestroy {
   // inform other parts of the app about the connection state
   private readonly connectionStatusSubject: BehaviorSubject<ConnectionStatus>;
 
+  // Socket.io fields (used when yjs feature flag is false)
   private socket: Socket;
+
+  // Yjs fields (used when yjs feature flag is true)
+  private yDoc: Y.Doc | null = null;
+  private wsProvider: WebsocketProvider | null = null;
+  private yjsSynced = false;
+  private yjsWritable = false;
+  private yjsSubscriptions: Subscription[] = [];
+  private yjsMapId: string | null = null;
+  private yjsNodesObserver:
+    | Parameters<Y.Map<unknown>['observeDeep']>[0]
+    | null = null;
+  private yjsOptionsObserver: Parameters<Y.Map<unknown>['observe']>[0] | null =
+    null;
+  private yjsAwarenessHandler: (() => void) | null = null;
+
+  // Common fields
   private colorMapping: ClientColorMapping;
   private availableColors: string[];
   private clientColor: string;
   private modificationSecret: string;
+  private readonly yjsEnabled: boolean;
 
   constructor() {
     // Initialization of the behavior subjects.
@@ -92,8 +119,8 @@ export class MapSyncService implements OnDestroy {
       null
     );
     this.connectionStatusSubject = new BehaviorSubject<ConnectionStatus>(null);
-
     this.clientListSubject = new BehaviorSubject<string[]>([]);
+
     this.availableColors = COLORS;
     this.clientColor =
       this.availableColors[
@@ -101,31 +128,24 @@ export class MapSyncService implements OnDestroy {
       ];
     this.modificationSecret = '';
     this.colorMapping = {};
+    this.yjsEnabled =
+      this.settingsService.getCachedSystemSettings()?.featureFlags?.yjs ??
+      false;
 
-    const reconnectOptions = {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 60,
-      randomizationFactor: 0.5,
-    };
-
-    const baseHref =
-      document.querySelector('base')?.getAttribute('href') ?? '/';
-    this.socket =
-      baseHref !== '/'
-        ? io('', {
-            path: `${baseHref}socket.io`,
-            ...reconnectOptions,
-          })
-        : io({
-            ...reconnectOptions,
-          });
+    if (!this.yjsEnabled) {
+      this.initSocketConnection();
+    }
   }
 
   ngOnDestroy() {
-    this.reset();
+    if (this.yjsEnabled) {
+      this.resetYjs();
+    } else {
+      this.resetSocketIo();
+    }
   }
+
+  // ─── Public API ──────────────────────────────────────────────
 
   /**
    * Creates a new map on server and prepares it locally
@@ -136,29 +156,6 @@ export class MapSyncService implements OnDestroy {
     this.storePrivateMapData(privateServerMap);
     this.setupNewMapState(privateServerMap);
     return privateServerMap;
-  }
-
-  /**
-   * Store private map data locally for admin access
-   */
-  private storePrivateMapData(privateServerMap: PrivateServerMap): void {
-    const serverMap = privateServerMap.map;
-    this.storageService.set(serverMap.uuid, {
-      adminId: privateServerMap.adminId,
-      modificationSecret: privateServerMap.modificationSecret,
-      ttl: serverMap.deletedAt,
-      rootName: serverMap.data[0].name,
-      createdAt: serverMap.createdAt,
-    });
-  }
-
-  /**
-   * Setup state for newly created map
-   */
-  private setupNewMapState(privateServerMap: PrivateServerMap): void {
-    this.prepareMap(privateServerMap.map);
-    this.settingsService.setEditMode(true);
-    this.modificationSecret = privateServerMap.modificationSecret;
   }
 
   public async prepareExistingMap(
@@ -174,17 +171,16 @@ export class MapSyncService implements OnDestroy {
 
     this.updateCachedMapForAdmin(serverMap);
     this.prepareMap(serverMap);
-
     return serverMap;
   }
 
-  // In case the component is destroyed or will be reinitialized it is important to reset state
-  // that might cause problems or performance issues, e.g. removing listeners, cleanup state.
-  // The current map is used inside the settings component and should stay therefore as it was.
+  // Detach MMP listeners but keep the Yjs connection alive for reuse
   public reset() {
-    if (this.socket) {
-      this.socket.removeAllListeners();
-      this.leaveMap();
+    if (this.yjsEnabled) {
+      this.detachYjsObservers();
+      this.unsubscribeYjsListeners();
+    } else {
+      this.resetSocketIo();
     }
     this.colorMapping = {};
   }
@@ -195,8 +191,12 @@ export class MapSyncService implements OnDestroy {
       this.mmpService.selectNode(this.mmpService.getRootNode().id)
     );
 
-    this.createMapListeners();
-    this.listenServerEvents(this.getAttachedMap().cachedMap.uuid);
+    if (this.yjsEnabled) {
+      this.initYjs();
+    } else {
+      this.createSocketIoListeners();
+      this.listenServerEvents(this.getAttachedMap().cachedMap.uuid);
+    }
   }
 
   public attachMap(cachedMapEntry: CachedMapEntry): void {
@@ -227,10 +227,6 @@ export class MapSyncService implements OnDestroy {
     return this.connectionStatusSubject.getValue();
   }
 
-  private setConnectionStatusSubject(value: ConnectionStatus) {
-    this.connectionStatusSubject.next(value);
-  }
-
   // update the attached map from outside control flow
   public async updateAttachedMap(): Promise<void> {
     const cachedMapEntry: CachedMapEntry = this.getAttachedMap();
@@ -248,32 +244,182 @@ export class MapSyncService implements OnDestroy {
     this.attachMap({ key: cachedMapEntry.key, cachedMap });
   }
 
-  public async joinMap(mmpUuid: string, color: string): Promise<MapProperties> {
-    return await new Promise<MapProperties>(
-      (
-        resolve: (value: MapProperties) => void,
-        reject: (reason: string) => void
-      ) => {
-        this.socket.emit(
-          'join',
-          { mapId: mmpUuid, color },
-          (serverMap: MapProperties) => {
-            if (!serverMap) {
-              reject('Server Map not available');
-              return;
-            }
-            resolve(serverMap);
-          }
-        );
-      }
-    );
+  public updateMapOptions(options?: CachedMapOptions) {
+    if (this.yjsEnabled) {
+      this.writeMapOptionsToYDoc(options);
+    } else {
+      this.emitUpdateMapOptions(options);
+    }
   }
 
-  public leaveMap() {
+  public async deleteMap(adminId: string): Promise<void> {
+    if (this.yjsEnabled) {
+      await this.deleteMapViaHttp(adminId);
+    } else {
+      this.deleteMapViaSocket(adminId);
+    }
+  }
+
+  public async fetchUserMapsFromServer(): Promise<CachedAdminMapEntry[]> {
+    const response = await this.httpService.get(API_URL.ROOT, '/maps');
+    if (!response.ok) return [];
+    const json: ServerMapInfo[] = await response.json();
+    return json.map(map => ({
+      id: map.uuid,
+      cachedAdminMapValue: {
+        adminId: map.adminId,
+        modificationSecret: map.modificationSecret,
+        ttl: map.ttl ? new Date(map.ttl) : new Date(),
+        rootName: map.rootName,
+        createdAt: new Date(map.createdAt)
+      },
+    }));
+  }
+
+  // ─── Socket.io initialization ────────────────────────────────
+
+  private initSocketConnection(): void {
+    const reconnectOptions = {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 60,
+      randomizationFactor: 0.5,
+    };
+
+    const baseHref =
+      document.querySelector('base')?.getAttribute('href') ?? '/';
+    this.socket =
+      baseHref !== '/'
+        ? io('', {
+            path: `${baseHref}socket.io`,
+            ...reconnectOptions,
+          })
+        : io({
+            ...reconnectOptions,
+          });
+  }
+
+  private resetSocketIo(): void {
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.leaveMap();
+    }
+  }
+
+  // ─── Socket.io map listeners (MMP → Socket.io) ──────────────
+
+  private createSocketIoListeners() {
+    this.setupSocketIoCreateHandler();
+    this.setupSocketIoSelectionHandlers();
+    this.setupSocketIoNodeUpdateHandler();
+    this.setupSocketIoUndoRedoHandlers();
+    this.setupSocketIoNodeCreateHandler();
+    this.setupSocketIoPasteHandler();
+    this.setupSocketIoNodeRemoveHandler();
+  }
+
+  private setupSocketIoCreateHandler(): void {
+    this.mmpService.on('create').subscribe((_result: MapCreateEvent) => {
+      this.attachedNodeSubject.next(this.mmpService.selectNode());
+      this.updateAttachedMap();
+      this.updateMap();
+    });
+  }
+
+  private setupSocketIoSelectionHandlers(): void {
+    this.mmpService
+      .on('nodeSelect')
+      .subscribe((nodeProps: ExportNodeProperties) => {
+        this.updateNodeSelectionSocketIo(nodeProps.id, true);
+        this.attachedNodeSubject.next(nodeProps);
+      });
+
+    this.mmpService
+      .on('nodeDeselect')
+      .subscribe((nodeProps: ExportNodeProperties) => {
+        this.updateNodeSelectionSocketIo(nodeProps.id, false);
+        this.attachedNodeSubject.next(nodeProps);
+      });
+  }
+
+  private setupSocketIoNodeUpdateHandler(): void {
+    this.mmpService.on('nodeUpdate').subscribe((result: NodeUpdateEvent) => {
+      this.attachedNodeSubject.next(result.nodeProperties);
+      this.emitUpdateNode(result);
+      this.updateAttachedMap();
+    });
+  }
+
+  private setupSocketIoUndoRedoHandlers(): void {
+    this.mmpService.on('undo').subscribe((diff?: MapDiff) => {
+      this.attachedNodeSubject.next(this.mmpService.selectNode());
+      this.updateAttachedMap();
+      this.emitApplyMapChangesByDiff(diff, 'undo');
+    });
+
+    this.mmpService.on('redo').subscribe((diff?: MapDiff) => {
+      this.attachedNodeSubject.next(this.mmpService.selectNode());
+      this.updateAttachedMap();
+      this.emitApplyMapChangesByDiff(diff, 'redo');
+    });
+  }
+
+  private setupSocketIoNodeCreateHandler(): void {
+    this.mmpService
+      .on('nodeCreate')
+      .subscribe((newNode: ExportNodeProperties) => {
+        this.emitAddNode(newNode);
+        this.updateAttachedMap();
+        this.mmpService.selectNode(newNode.id);
+        this.mmpService.editNode();
+      });
+  }
+
+  private setupSocketIoPasteHandler(): void {
+    this.mmpService
+      .on('nodePaste')
+      .subscribe((newNodes: ExportNodeProperties[]) => {
+        this.emitAddNodes(newNodes);
+        this.updateAttachedMap();
+      });
+  }
+
+  private setupSocketIoNodeRemoveHandler(): void {
+    this.mmpService
+      .on('nodeRemove')
+      .subscribe((removedNode: ExportNodeProperties) => {
+        this.emitRemoveNode(removedNode);
+        this.updateAttachedMap();
+      });
+  }
+
+  // ─── Socket.io emit methods ──────────────────────────────────
+
+  private async joinMap(
+    mmpUuid: string,
+    color: string
+  ): Promise<MapProperties> {
+    return new Promise<MapProperties>((resolve, reject) => {
+      this.socket.emit(
+        'join',
+        { mapId: mmpUuid, color },
+        (serverMap: MapProperties) => {
+          if (!serverMap) {
+            reject('Server Map not available');
+            return;
+          }
+          resolve(serverMap);
+        }
+      );
+    });
+  }
+
+  private leaveMap() {
     this.socket.emit('leave');
   }
 
-  public addNode(newNode: ExportNodeProperties) {
+  private emitAddNode(newNode: ExportNodeProperties) {
     // Emit with acknowledgment callback for error handling
     this.socket.emit(
       'addNodes',
@@ -292,7 +438,7 @@ export class MapSyncService implements OnDestroy {
    * Add multiple nodes with server validation and error handling
    * Used for bulk operations like paste
    */
-  public addNodes(newNodes: ExportNodeProperties[]) {
+  private emitAddNodes(newNodes: ExportNodeProperties[]) {
     // Emit with acknowledgment callback for error handling
     this.socket.emit(
       'addNodes',
@@ -310,7 +456,7 @@ export class MapSyncService implements OnDestroy {
   /**
    * Update node property with server validation and error handling
    */
-  public updateNode(nodeUpdate: NodeUpdateEvent) {
+  private emitUpdateNode(nodeUpdate: NodeUpdateEvent) {
     // Emit with acknowledgment callback for error handling
     this.socket.emit(
       'updateNode',
@@ -329,7 +475,7 @@ export class MapSyncService implements OnDestroy {
   /**
    * Remove node with server validation and error handling
    */
-  public removeNode(removedNode: ExportNodeProperties) {
+  private emitRemoveNode(removedNode: ExportNodeProperties) {
     // Emit with acknowledgment callback for error handling
     this.socket.emit(
       'removeNode',
@@ -347,14 +493,15 @@ export class MapSyncService implements OnDestroy {
   /**
    * Apply undo/redo changes with server validation and error handling
    */
-  public applyMapChangesByDiff(diff: MapDiff, operationType: 'undo' | 'redo') {
-    const cachedMapEntry: CachedMapEntry = this.getAttachedMap();
-
+  private emitApplyMapChangesByDiff(
+    diff: MapDiff,
+    operationType: 'undo' | 'redo'
+  ) {
     // Emit with acknowledgment callback for error handling
     this.socket.emit(
       'applyMapChangesByDiff',
       {
-        mapId: cachedMapEntry.cachedMap.uuid,
+        mapId: this.getAttachedMap().cachedMap.uuid,
         diff,
         modificationSecret: this.modificationSecret,
       },
@@ -367,7 +514,7 @@ export class MapSyncService implements OnDestroy {
     );
   }
 
-  public updateMap() {
+  private updateMap() {
     const cachedMapEntry: CachedMapEntry = this.getAttachedMap();
     this.socket.emit('updateMap', {
       mapId: cachedMapEntry.cachedMap.uuid,
@@ -376,7 +523,7 @@ export class MapSyncService implements OnDestroy {
     });
   }
 
-  public updateMapOptions(options?: CachedMapOptions) {
+  private emitUpdateMapOptions(options?: CachedMapOptions) {
     const cachedMapEntry: CachedMapEntry = this.getAttachedMap();
     this.socket.emit('updateMapOptions', {
       mapId: cachedMapEntry.cachedMap.uuid,
@@ -385,17 +532,16 @@ export class MapSyncService implements OnDestroy {
     });
   }
 
-  public async deleteMap(adminId: string): Promise<void> {
+  private deleteMapViaSocket(adminId: string): void {
     const cachedMapEntry: CachedMapEntry = this.getAttachedMap();
-    const body: { adminId: string; mapId: string } = {
+    this.socket.emit('deleteMap', {
       adminId,
       mapId: cachedMapEntry.cachedMap.uuid,
-    };
-    this.socket.emit('deleteMap', body);
+    });
   }
 
-  public async updateNodeSelection(id: string, selected: boolean) {
-    // Remember all clients selections with the dedicated colors to switch between colors when clients change among nodes
+  // Remember all clients selections with the dedicated colors to switch between colors when clients change among nodes
+  private updateNodeSelectionSocketIo(id: string, selected: boolean) {
     if (selected) {
       this.colorMapping[this.socket.id] = {
         color: DEFAULT_SELF_COLOR,
@@ -429,60 +575,7 @@ export class MapSyncService implements OnDestroy {
     );
   }
 
-  private async fetchMapFromServer(id: string): Promise<ServerMap> {
-    const response = await this.httpService.get(API_URL.ROOT, '/maps/' + id);
-    if (!response.ok) return null;
-    const json: ServerMap = await response.json();
-    return json;
-  }
-
-  public async fetchUserMapsFromServer(): Promise<CachedAdminMapEntry[]> {
-    const response = await this.httpService.get(API_URL.ROOT, '/maps');
-    if (!response.ok) return [];
-    const json: ServerMapInfo[] = await response.json();
-    const mapEntries: CachedAdminMapEntry[] = json.map(map => ({
-      id: map.uuid,
-      cachedAdminMapValue: {
-        createdAt: map.createdAt ? new Date(map.createdAt) : null,
-        adminId: map.adminId,
-        modificationSecret: map.modificationSecret,
-        ttl: map.ttl ? new Date(map.ttl) : new Date(),
-        rootName: map.rootName,
-      },
-    }));
-    return mapEntries;
-  }
-
-  private async postMapToServer(): Promise<PrivateServerMap> {
-    const response = await this.httpService.post(
-      API_URL.ROOT,
-      '/maps/',
-      JSON.stringify({
-        rootNode:
-          this.settingsService.getCachedUserSettings().mapOptions.rootNode,
-      })
-    );
-
-    return response.json();
-  }
-
-  /**
-   * Return the key of the map in the storage
-   */
-  private createKey(uuid: string): string {
-    return `map-${uuid}`;
-  }
-
-  /**
-   * Converts server map
-   */
-  private convertServerMapToMmp(serverMap: ServerMap): MapProperties {
-    return Object.assign({}, serverMap, {
-      lastModified: Date.parse(serverMap.lastModified),
-      deletedAt: Date.parse(serverMap.deletedAt),
-      createdAt: Date.parse(serverMap.createdAt),
-    });
-  }
+  // ─── Socket.io server event handlers ─────────────────────────
 
   /**
    * Setup all server event listeners and join the map
@@ -539,7 +632,7 @@ export class MapSyncService implements OnDestroy {
     const msg = await this.utilsService.translate(notification.message);
     if (!msg) return;
 
-    const toastHandlers = {
+    const toastHandlers: Record<string, () => void> = {
       error: () => this.toastrService.error(msg),
       success: () => this.toastrService.success(msg),
       warning: () => this.toastrService.warning(msg),
@@ -601,9 +694,8 @@ export class MapSyncService implements OnDestroy {
   private setupNodeRemovedHandler(): void {
     this.socket.on('nodeRemoved', (result: ResponseNodeRemoved) => {
       if (result.clientId === this.socket.id) return;
-      const removedNodeId = result.nodeId;
-      if (this.mmpService.existNode(removedNodeId)) {
-        this.mmpService.removeNode(removedNodeId, false);
+      if (this.mmpService.existNode(result.nodeId)) {
+        this.mmpService.removeNode(result.nodeId, false);
       }
     });
   }
@@ -643,35 +735,29 @@ export class MapSyncService implements OnDestroy {
    * Apply map diff for undo/redo operations
    */
   private applyMapDiff(diff: MapDiff): void {
-    const { added, updated, deleted } = diff;
-
-    this.applyAddedNodes(added);
-    this.applyUpdatedNodes(updated);
-    this.applyDeletedNodes(deleted);
+    this.applyAddedNodes(diff.added);
+    this.applyUpdatedNodes(diff.updated);
+    this.applyDeletedNodes(diff.deleted);
   }
 
   /**
    * Apply added nodes from diff
    */
-  private applyAddedNodes(added: unknown): void {
-    if (added && typeof added === 'object') {
-      for (const nodeId in added) {
-        const node = added[nodeId];
-        this.mmpService.addNode(node, false);
-      }
+  private applyAddedNodes(added: SnapshotChanges): void {
+    if (!added) return;
+    for (const nodeId in added) {
+      this.mmpService.addNode(added[nodeId], false);
     }
   }
 
   /**
    * Apply updated nodes from diff
    */
-  private applyUpdatedNodes(updated: unknown): void {
-    if (updated && typeof updated === 'object') {
-      for (const nodeId in updated) {
-        const node = updated[nodeId];
-        if (this.mmpService.existNode(nodeId)) {
-          this.applyNodePropertyUpdates(nodeId, node);
-        }
+  private applyUpdatedNodes(updated: SnapshotChanges): void {
+    if (!updated) return;
+    for (const nodeId in updated) {
+      if (this.mmpService.existNode(nodeId)) {
+        this.applyNodePropertyUpdates(nodeId, updated[nodeId]);
       }
     }
   }
@@ -679,10 +765,13 @@ export class MapSyncService implements OnDestroy {
   /**
    * Apply property updates to a single node
    */
-  private applyNodePropertyUpdates(nodeId: string, nodeUpdates: unknown): void {
-    if (typeof nodeUpdates !== 'object' || !nodeUpdates) return;
+  private applyNodePropertyUpdates(
+    nodeId: string,
+    nodeUpdates: Partial<ExportNodeProperties>
+  ): void {
+    if (!nodeUpdates) return;
 
-    for (const property in nodeUpdates as Record<string, unknown>) {
+    for (const property in nodeUpdates) {
       const updatedProperty = this.getClientProperty(
         property,
         (nodeUpdates as Record<string, unknown>)[property]
@@ -717,11 +806,10 @@ export class MapSyncService implements OnDestroy {
 
     if (mapping && typeof value === 'object') {
       const subProperty = Object.keys(value)[0];
-      const nestedMapping = mapping[subProperty];
-      return {
-        clientProperty: nestedMapping,
-        directValue: value[subProperty],
-      };
+      const nestedMapping = mapping[
+        subProperty as keyof typeof mapping
+      ] as string;
+      return { clientProperty: nestedMapping, directValue: value[subProperty] };
     }
 
     return;
@@ -730,12 +818,11 @@ export class MapSyncService implements OnDestroy {
   /**
    * Apply deleted nodes from diff
    */
-  private applyDeletedNodes(deleted: unknown): void {
-    if (deleted && typeof deleted === 'object') {
-      for (const nodeId in deleted) {
-        if (this.mmpService.existNode(nodeId)) {
-          this.mmpService.removeNode(nodeId, false);
-        }
+  private applyDeletedNodes(deleted: SnapshotChanges): void {
+    if (!deleted) return;
+    for (const nodeId in deleted) {
+      if (this.mmpService.existNode(nodeId)) {
+        this.mmpService.removeNode(nodeId, false);
       }
     }
   }
@@ -860,47 +947,7 @@ export class MapSyncService implements OnDestroy {
     });
   }
 
-  private colorForNode(nodeId: string): string {
-    const matchingClient = this.clientForNode(nodeId);
-    return matchingClient ? this.colorMapping[matchingClient].color : '';
-  }
-
-  private clientForNode(nodeId: string): string {
-    return Object.keys(this.colorMapping)
-      .filter((key: string) => {
-        return this.colorMapping[key]?.nodeId === nodeId;
-      })
-      .shift();
-  }
-
-  private extractClientListForSubscriber(): void {
-    this.clientListSubject.next(
-      Object.values(this.colorMapping).map(
-        (e: ClientColorMappingValue) => e?.color
-      )
-    );
-  }
-
-  private prepareMap(serverMap: ServerMap) {
-    const mapKey = this.createKey(serverMap.uuid);
-    const mapProps = this.convertServerMapToMmp(serverMap);
-    this.attachMap({
-      key: mapKey,
-      cachedMap: { ...mapProps, ...{ options: serverMap.options } },
-    });
-    this.mmpService.updateAdditionalMapOptions(serverMap.options);
-  }
-
-  private async updateCachedMapForAdmin(serverMap: ServerMap) {
-    const map: CachedAdminMapValue | null = (await this.storageService.get(
-      serverMap.uuid
-    )) as CachedAdminMapValue | null;
-    if (map) {
-      map.ttl = new Date(serverMap.deletedAt);
-      map.rootName = serverMap.data?.[0]?.name;
-      this.storageService.set(serverMap.uuid, map);
-    }
-  }
+  // ─── Socket.io error handling ────────────────────────────────
 
   /**
    * Validate ServerMap structure at runtime
@@ -969,51 +1016,65 @@ export class MapSyncService implements OnDestroy {
 
     // Validate error response structure before processing
     if (!this.isValidErrorResponse(response)) {
-      let malformedResponseMessage: string;
-      try {
-        malformedResponseMessage = await this.utilsService.translate(
-          'TOASTS.ERRORS.MALFORMED_RESPONSE'
-        );
-      } catch {
-        malformedResponseMessage = 'Invalid server response. Please try again.';
-      }
-      this.dialogService.openCriticalErrorDialog({
-        code: 'MALFORMED_RESPONSE',
-        message: malformedResponseMessage,
-      });
+      await this.showMalformedResponseError();
       return;
     }
 
     // Error occurred - reload from fullMapState if available
     if (response.fullMapState) {
-      // Reload entire map from server's authoritative state
-      this.mmpService.new(response.fullMapState.data, false);
-
-      // Show appropriate error notification
-      let operationFailedMessage: string;
-      try {
-        operationFailedMessage = await this.utilsService.translate(
-          'TOASTS.ERRORS.OPERATION_FAILED_MAP_RELOADED'
-        );
-      } catch {
-        operationFailedMessage = 'Operation failed - map reloaded';
-      }
-      this.toastService.showValidationCorrection(
-        `${operationName}`,
-        operationFailedMessage
-      );
+      await this.handleRecoverableError(response, operationName);
     } else {
       // No fullMapState provided - show critical error
-      const userMessage = await this.getUserFriendlyErrorMessage(
-        response.code || 'SERVER_ERROR',
-        response.message || 'Unknown error'
-      );
-
-      this.dialogService.openCriticalErrorDialog({
-        code: response.code || 'SERVER_ERROR',
-        message: userMessage,
-      });
+      await this.handleCriticalError(response);
     }
+  }
+
+  private async showMalformedResponseError(): Promise<void> {
+    let message: string;
+    try {
+      message = await this.utilsService.translate(
+        'TOASTS.ERRORS.MALFORMED_RESPONSE'
+      );
+    } catch {
+      message = 'Invalid server response. Please try again.';
+    }
+    this.dialogService.openCriticalErrorDialog({
+      code: 'MALFORMED_RESPONSE',
+      message,
+    });
+  }
+
+  private async handleRecoverableError(
+    response: ValidationErrorResponse | CriticalErrorResponse,
+    operationName: string
+  ): Promise<void> {
+    // Reload entire map from server's authoritative state
+    this.mmpService.new(response.fullMapState.data, false);
+
+    let message: string;
+    try {
+      message = await this.utilsService.translate(
+        'TOASTS.ERRORS.OPERATION_FAILED_MAP_RELOADED'
+      );
+    } catch {
+      message = 'Operation failed - map reloaded';
+    }
+    // Show appropriate error notification
+    this.toastService.showValidationCorrection(operationName, message);
+  }
+
+  private async handleCriticalError(
+    response: ValidationErrorResponse | CriticalErrorResponse
+  ): Promise<void> {
+    const userMessage = await this.getUserFriendlyErrorMessage(
+      response.code || 'SERVER_ERROR',
+      response.message || 'Unknown error'
+    );
+
+    this.dialogService.openCriticalErrorDialog({
+      code: response.code || 'SERVER_ERROR',
+      message: userMessage,
+    });
   }
 
   /**
@@ -1041,73 +1102,766 @@ export class MapSyncService implements OnDestroy {
     }
   }
 
-  private createMapListeners() {
-    // create is NOT called by the mmp lib for initial map load / and call, but for _imported_ maps
-    this.mmpService.on('create').subscribe((_result: MapCreateEvent) => {
-      this.attachedNodeSubject.next(this.mmpService.selectNode());
+  // ─── Yjs initialization ──────────────────────────────────────
 
-      this.updateAttachedMap();
-      this.updateMap();
+  private initYjs(): void {
+    const uuid = this.getAttachedMap().cachedMap.uuid;
+
+    if (this.hasActiveYjsConnection(uuid)) {
+      this.reattachYjsListeners();
+      return;
+    }
+
+    this.resetYjs();
+    this.yjsMapId = uuid;
+    this.yDoc = new Y.Doc();
+    this.setupYjsConnection(uuid);
+    this.setupYjsConnectionStatus();
+    this.setupYjsMapDeletionHandler();
+    this.createYjsListeners();
+  }
+
+  private hasActiveYjsConnection(mapId: string): boolean {
+    return (
+      this.yDoc !== null && this.wsProvider !== null && this.yjsMapId === mapId
+    );
+  }
+
+  private reattachYjsListeners(): void {
+    this.createYjsListeners();
+    if (this.yjsSynced) {
+      this.loadMapFromYDoc();
+      this.setupYjsNodesObserver();
+      this.setupYjsMapOptionsObserver();
+      this.setupYjsAwareness();
+      this.settingsService.setEditMode(this.yjsWritable);
+      this.setConnectionStatusSubject('connected');
+    }
+  }
+
+  private setupYjsConnection(mapId: string): void {
+    const wsUrl = this.buildYjsWsUrl();
+    this.wsProvider = new WebsocketProvider(wsUrl, mapId, this.yDoc, {
+      params: { secret: this.modificationSecret },
+      maxBackoffTime: 5000,
+      disableBc: true,
     });
 
-    this.mmpService
-      .on('nodeSelect')
-      .subscribe((nodeProps: ExportNodeProperties) => {
-        this.updateNodeSelection(nodeProps.id, true);
-        this.attachedNodeSubject.next(nodeProps);
-      });
+    this.setupYjsWriteAccessListener();
 
-    this.mmpService
-      .on('nodeDeselect')
-      .subscribe((nodeProps: ExportNodeProperties) => {
-        this.updateNodeSelection(nodeProps.id, false);
-        this.attachedNodeSubject.next(nodeProps);
-      });
-
-    this.mmpService.on('nodeUpdate').subscribe((result: NodeUpdateEvent) => {
-      this.attachedNodeSubject.next(result.nodeProperties);
-      this.updateNode(result);
-      this.updateAttachedMap();
+    this.wsProvider.on('sync', (synced: boolean) => {
+      if (synced && !this.yjsSynced) {
+        this.handleFirstYjsSync();
+      }
     });
+  }
 
-    this.mmpService.on('undo').subscribe((diff?: MapDiff) => {
-      this.attachedNodeSubject.next(this.mmpService.selectNode());
-      // Updating the attached map is important because this persists changes after refresh
-      this.updateAttachedMap();
-      this.applyMapChangesByDiff(diff, 'undo');
+  private buildYjsWsUrl(): string {
+    return buildYjsWsUrl();
+  }
+
+  private handleFirstYjsSync(): void {
+    this.yjsSynced = true;
+    this.loadMapFromYDoc();
+    this.setupYjsNodesObserver();
+    this.setupYjsMapOptionsObserver();
+    this.setupYjsAwareness();
+    this.settingsService.setEditMode(this.yjsWritable);
+    this.setConnectionStatusSubject('connected');
+  }
+
+  private setupYjsConnectionStatus(): void {
+    this.wsProvider.on(
+      'status',
+      (event: { status: 'connected' | 'disconnected' | 'connecting' }) => {
+        if (!this.wsProvider) return;
+        if (event.status === 'connected') {
+          this.setConnectionStatusSubject('connected');
+        } else if (event.status === 'disconnected') {
+          this.setConnectionStatusSubject('disconnected');
+        }
+      }
+    );
+  }
+
+  private setupYjsMapDeletionHandler(): void {
+    this.wsProvider.on('connection-close', (event: CloseEvent | null) => {
+      if (event?.code === WS_CLOSE_MAP_DELETED) {
+        window.location.reload();
+      }
     });
+  }
 
-    this.mmpService.on('redo').subscribe((diff?: MapDiff) => {
-      this.attachedNodeSubject.next(this.mmpService.selectNode());
-      // Updating the attached map is important because this persists changes after refresh
-      this.updateAttachedMap();
-      this.applyMapChangesByDiff(diff, 'redo');
+  // Listen for the server's write-access message (type 4) to set edit mode
+  private setupYjsWriteAccessListener(): void {
+    // Prevent "Unable to compute message" warning in y-websocket
+    this.wsProvider.messageHandlers[MESSAGE_WRITE_ACCESS] = () => {
+      // no-op: handled via raw WebSocket listener below
+    };
+
+    this.wsProvider.on(
+      'status',
+      (event: { status: 'connected' | 'disconnected' | 'connecting' }) => {
+        if (event.status !== 'connected') return;
+        this.attachWriteAccessListener();
+      }
+    );
+  }
+
+  private attachWriteAccessListener(): void {
+    const ws = this.wsProvider?.ws;
+    if (!ws) return;
+    ws.addEventListener('message', (event: MessageEvent) => {
+      this.parseWriteAccessMessage(event);
     });
+  }
 
-    this.mmpService
-      .on('nodeCreate')
-      .subscribe((newNode: ExportNodeProperties) => {
-        // Send node creation to server for validation
-        this.addNode(newNode);
+  private parseWriteAccessMessage(event: MessageEvent): void {
+    const data = new Uint8Array(event.data as ArrayBuffer);
+    const result = parseWriteAccessBytes(data);
+    if (result !== null) {
+      this.yjsWritable = result;
+      this.settingsService.setEditMode(this.yjsWritable);
+    }
+  }
+
+  private resetYjs(): void {
+    this.unsubscribeYjsListeners();
+    this.detachYjsObservers();
+    const provider = this.wsProvider;
+    this.wsProvider = null;
+    if (provider) {
+      provider.disconnect();
+      provider.destroy();
+    }
+    if (this.yDoc) {
+      this.yDoc.destroy();
+      this.yDoc = null;
+    }
+    this.yjsSynced = false;
+    this.yjsWritable = false;
+    this.yjsMapId = null;
+  }
+
+  // ─── Yjs: initial map load ───────────────────────────────────
+
+  private loadMapFromYDoc(): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    const snapshot = this.extractSnapshotFromYDoc(nodesMap);
+    if (snapshot.length > 0) {
+      this.mmpService.new(snapshot, false);
+    }
+  }
+
+  private extractSnapshotFromYDoc(
+    nodesMap: Y.Map<Y.Map<unknown>>
+  ): ExportNodeProperties[] {
+    const nodes: ExportNodeProperties[] = [];
+    nodesMap.forEach((yNode: Y.Map<unknown>) => {
+      nodes.push(this.yMapToNodeProps(yNode));
+    });
+    return sortParentFirst(nodes);
+  }
+
+  // ─── Yjs: MMP event listeners (MMP → Y.Doc) ─────────────────
+
+  private createYjsListeners(): void {
+    this.unsubscribeYjsListeners();
+    this.setupYjsCreateHandler();
+    this.setupYjsSelectionHandlers();
+    this.setupYjsNodeUpdateHandler();
+    this.setupYjsUndoRedoHandlers();
+    this.setupYjsNodeCreateHandler();
+    this.setupYjsPasteHandler();
+    this.setupYjsNodeRemoveHandler();
+  }
+
+  private unsubscribeYjsListeners(): void {
+    this.yjsSubscriptions.forEach(sub => sub.unsubscribe());
+    this.yjsSubscriptions = [];
+  }
+
+  // Handles map import: clear and repopulate Y.Doc nodes
+  private setupYjsCreateHandler(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService.on('create').subscribe((_result: MapCreateEvent) => {
+        this.attachedNodeSubject.next(this.mmpService.selectNode());
         this.updateAttachedMap();
-        this.mmpService.selectNode(newNode.id);
-        this.mmpService.editNode();
-      });
+        if (this.yjsSynced) {
+          this.writeImportToYDoc();
+        }
+      })
+    );
+  }
 
-    this.mmpService
-      .on('nodePaste')
-      .subscribe((newNodes: ExportNodeProperties[]) => {
-        // Send bulk paste operations to server for validation
-        this.addNodes(newNodes);
-        this.updateAttachedMap();
-      });
+  private setupYjsSelectionHandlers(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService
+        .on('nodeSelect')
+        .subscribe((nodeProps: ExportNodeProperties) => {
+          if (!this.yDoc) return;
+          this.updateYjsAwarenessSelection(nodeProps.id);
+          this.attachedNodeSubject.next(nodeProps);
+        })
+    );
 
-    this.mmpService
-      .on('nodeRemove')
-      .subscribe((removedNode: ExportNodeProperties) => {
-        // Send node removal to server for validation
-        this.removeNode(removedNode);
+    this.yjsSubscriptions.push(
+      this.mmpService
+        .on('nodeDeselect')
+        .subscribe((nodeProps: ExportNodeProperties) => {
+          if (!this.yDoc) return;
+          this.updateYjsAwarenessSelection(null);
+          this.attachedNodeSubject.next(nodeProps);
+        })
+    );
+  }
+
+  private setupYjsNodeUpdateHandler(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService.on('nodeUpdate').subscribe((result: NodeUpdateEvent) => {
+        if (!this.yDoc) return;
+        this.attachedNodeSubject.next(result.nodeProperties);
+        this.writeNodeUpdateToYDoc(result);
         this.updateAttachedMap();
-      });
+      })
+    );
+  }
+
+  private setupYjsUndoRedoHandlers(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService.on('undo').subscribe((diff?: MapDiff) => {
+        if (!this.yDoc) return;
+        this.attachedNodeSubject.next(this.mmpService.selectNode());
+        this.updateAttachedMap();
+        this.writeUndoRedoDiffToYDoc(diff);
+      })
+    );
+
+    this.yjsSubscriptions.push(
+      this.mmpService.on('redo').subscribe((diff?: MapDiff) => {
+        if (!this.yDoc) return;
+        this.attachedNodeSubject.next(this.mmpService.selectNode());
+        this.updateAttachedMap();
+        this.writeUndoRedoDiffToYDoc(diff);
+      })
+    );
+  }
+
+  private setupYjsNodeCreateHandler(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService
+        .on('nodeCreate')
+        .subscribe((newNode: ExportNodeProperties) => {
+          if (!this.yDoc) return;
+          this.writeNodeCreateToYDoc(newNode);
+          this.updateAttachedMap();
+          this.mmpService.selectNode(newNode.id);
+          this.mmpService.editNode();
+        })
+    );
+  }
+
+  private setupYjsPasteHandler(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService
+        .on('nodePaste')
+        .subscribe((newNodes: ExportNodeProperties[]) => {
+          if (!this.yDoc) return;
+          this.writeNodesPasteToYDoc(newNodes);
+          this.updateAttachedMap();
+        })
+    );
+  }
+
+  private setupYjsNodeRemoveHandler(): void {
+    this.yjsSubscriptions.push(
+      this.mmpService
+        .on('nodeRemove')
+        .subscribe((removedNode: ExportNodeProperties) => {
+          if (!this.yDoc) return;
+          this.writeNodeRemoveFromYDoc(removedNode.id);
+          this.updateAttachedMap();
+        })
+    );
+  }
+
+  // ─── Yjs: write operations (MMP → Y.Doc) ────────────────────
+
+  private writeNodeCreateToYDoc(nodeProps: ExportNodeProperties): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    const yNode = new Y.Map<unknown>();
+    this.populateYMapFromNodeProps(yNode, nodeProps);
+    nodesMap.set(nodeProps.id, yNode);
+  }
+
+  private writeNodeUpdateToYDoc(event: NodeUpdateEvent): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    const yNode = nodesMap.get(event.nodeProperties.id);
+    if (!yNode) return;
+
+    const topLevelKey = NodePropertyMapping[event.changedProperty][0];
+    const value =
+      event.nodeProperties[topLevelKey as keyof ExportNodeProperties];
+    yNode.set(topLevelKey, value);
+  }
+
+  private writeNodeRemoveFromYDoc(nodeId: string): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    nodesMap.delete(nodeId);
+  }
+
+  private writeNodesPasteToYDoc(nodes: ExportNodeProperties[]): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    this.yDoc.transact(() => {
+      for (const node of nodes) {
+        const yNode = new Y.Map<unknown>();
+        this.populateYMapFromNodeProps(yNode, node);
+        nodesMap.set(node.id, yNode);
+      }
+    });
+  }
+
+  private writeImportToYDoc(): void {
+    const snapshot = this.mmpService.exportAsJSON();
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    const sorted = sortParentFirst(snapshot);
+
+    this.yDoc.transact(() => {
+      this.clearAndRepopulateNodes(nodesMap, sorted);
+    });
+  }
+
+  private clearAndRepopulateNodes(
+    nodesMap: Y.Map<Y.Map<unknown>>,
+    snapshot: ExportNodeProperties[]
+  ): void {
+    for (const key of Array.from(nodesMap.keys())) {
+      nodesMap.delete(key);
+    }
+    for (const node of snapshot) {
+      const yNode = new Y.Map<unknown>();
+      this.populateYMapFromNodeProps(yNode, node);
+      nodesMap.set(node.id, yNode);
+    }
+  }
+
+  private writeUndoRedoDiffToYDoc(diff: MapDiff): void {
+    if (!diff) return;
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+
+    this.yDoc.transact(() => {
+      this.writeAddedNodesToYDoc(nodesMap, diff.added);
+      this.writeUpdatedNodesToYDoc(nodesMap, diff.updated);
+      this.writeDeletedNodesFromYDoc(nodesMap, diff.deleted);
+    });
+  }
+
+  private writeAddedNodesToYDoc(
+    nodesMap: Y.Map<Y.Map<unknown>>,
+    added: SnapshotChanges
+  ): void {
+    if (!added) return;
+    for (const nodeId in added) {
+      const nodeProps = added[nodeId] as ExportNodeProperties;
+      const yNode = new Y.Map<unknown>();
+      this.populateYMapFromNodeProps(yNode, nodeProps);
+      nodesMap.set(nodeId, yNode);
+    }
+  }
+
+  private writeUpdatedNodesToYDoc(
+    nodesMap: Y.Map<Y.Map<unknown>>,
+    updated: SnapshotChanges
+  ): void {
+    if (!updated) return;
+    for (const nodeId in updated) {
+      const yNode = nodesMap.get(nodeId);
+      if (!yNode) continue;
+      this.applyPropertyUpdatesToYMap(yNode, updated[nodeId]);
+    }
+  }
+
+  private applyPropertyUpdatesToYMap(
+    yNode: Y.Map<unknown>,
+    updates: Partial<ExportNodeProperties>
+  ): void {
+    if (!updates) return;
+    for (const key in updates) {
+      yNode.set(key, (updates as Record<string, unknown>)[key]);
+    }
+  }
+
+  private writeDeletedNodesFromYDoc(
+    nodesMap: Y.Map<Y.Map<unknown>>,
+    deleted: SnapshotChanges
+  ): void {
+    if (!deleted) return;
+    for (const nodeId in deleted) {
+      nodesMap.delete(nodeId);
+    }
+  }
+
+  private writeMapOptionsToYDoc(options?: CachedMapOptions): void {
+    if (!this.yDoc || !options) return;
+    const optionsMap = this.yDoc.getMap('mapOptions');
+    optionsMap.set('fontMaxSize', options.fontMaxSize);
+    optionsMap.set('fontMinSize', options.fontMinSize);
+    optionsMap.set('fontIncrement', options.fontIncrement);
+  }
+
+  private async deleteMapViaHttp(adminId: string): Promise<void> {
+    const mapId = this.getAttachedMap().cachedMap.uuid;
+    await this.httpService.delete(
+      API_URL.ROOT,
+      `/maps/${mapId}`,
+      JSON.stringify({ adminId })
+    );
+  }
+
+  // ─── Yjs: Y.Doc observers (Y.Doc → MMP) ─────────────────────
+
+  private detachYjsObservers(): void {
+    if (this.yDoc && this.yjsNodesObserver) {
+      const nodesMap = this.yDoc.getMap('nodes');
+      nodesMap.unobserveDeep(this.yjsNodesObserver);
+      this.yjsNodesObserver = null;
+    }
+    if (this.yDoc && this.yjsOptionsObserver) {
+      const optionsMap = this.yDoc.getMap('mapOptions');
+      optionsMap.unobserve(this.yjsOptionsObserver);
+      this.yjsOptionsObserver = null;
+    }
+    if (this.wsProvider && this.yjsAwarenessHandler) {
+      this.wsProvider.awareness.off('change', this.yjsAwarenessHandler);
+      this.yjsAwarenessHandler = null;
+    }
+  }
+
+  private setupYjsNodesObserver(): void {
+    const nodesMap = this.yDoc.getMap('nodes') as Y.Map<Y.Map<unknown>>;
+    this.yjsNodesObserver = (
+      events: Y.YEvent<Y.AbstractType<Y.YEvent<Y.AbstractType<unknown>>>>[],
+      transaction: Y.Transaction
+    ) => {
+      if (transaction.local) return;
+      for (const event of events) {
+        this.handleYjsNodeEvent(event, nodesMap);
+      }
+    };
+    nodesMap.observeDeep(this.yjsNodesObserver);
+  }
+
+  private handleYjsNodeEvent(
+    event: Y.YEvent<Y.AbstractType<Y.YEvent<Y.AbstractType<unknown>>>>,
+    nodesMap: Y.Map<Y.Map<unknown>>
+  ): void {
+    if (event.target === nodesMap) {
+      this.handleTopLevelNodeChanges(event, nodesMap);
+    } else {
+      this.handleNodePropertyChanges(event);
+    }
+  }
+
+  // Handles node add/delete/update from the top-level nodes map
+  private handleTopLevelNodeChanges(
+    event: Y.YEvent<Y.AbstractType<Y.YEvent<Y.AbstractType<unknown>>>>,
+    nodesMap: Y.Map<Y.Map<unknown>>
+  ): void {
+    const mapEvent = event as unknown as Y.YMapEvent<Y.Map<unknown>>;
+
+    if (this.isFullMapReplacement(mapEvent, nodesMap)) {
+      this.loadMapFromYDoc();
+      this.showImportToast();
+      return;
+    }
+
+    mapEvent.keysChanged.forEach(key => {
+      const change = mapEvent.changes.keys.get(key);
+      if (!change) return;
+
+      if (change.action === 'add') {
+        this.applyRemoteNodeAdd(nodesMap.get(key));
+      } else if (change.action === 'update') {
+        this.applyRemoteNodeDelete(key);
+        this.applyRemoteNodeAdd(nodesMap.get(key));
+      } else if (change.action === 'delete') {
+        this.applyRemoteNodeDelete(key);
+      }
+    });
+  }
+
+  // Show toast to inform the user that a remote client imported a map
+  private async showImportToast(): Promise<void> {
+    const msg = await this.utilsService.translate('TOASTS.MAP_IMPORT_SUCCESS');
+    if (msg) this.toastrService.success(msg);
+  }
+
+  // Detects a full map import by checking if a root node is being added/replaced.
+  // Normal operations never add root nodes, so this reliably identifies imports.
+  private isFullMapReplacement(
+    mapEvent: Y.YMapEvent<Y.Map<unknown>>,
+    nodesMap: Y.Map<Y.Map<unknown>>
+  ): boolean {
+    for (const [key, change] of mapEvent.changes.keys) {
+      if (change.action === 'add' || change.action === 'update') {
+        const yNode = nodesMap.get(key);
+        if (yNode?.get('isRoot')) return true;
+      }
+    }
+    return false;
+  }
+
+  // Handles property changes on individual node Y.Maps
+  private handleNodePropertyChanges(
+    event: Y.YEvent<Y.AbstractType<Y.YEvent<Y.AbstractType<unknown>>>>
+  ): void {
+    const yNode = event.target as unknown as Y.Map<unknown>;
+    const nodeId = yNode.get('id') as string;
+    if (!nodeId || !this.mmpService.existNode(nodeId)) return;
+
+    const mapEvent = event as unknown as Y.YMapEvent<unknown>;
+    mapEvent.keysChanged.forEach(key => {
+      this.applyYDocPropertyToMmp(nodeId, key, yNode.get(key));
+    });
+  }
+
+  private applyRemoteNodeAdd(yNode: Y.Map<unknown>): void {
+    if (!yNode) return;
+    const nodeProps = this.yMapToNodeProps(yNode);
+    this.mmpService.addNodesFromServer([nodeProps]);
+  }
+
+  private applyRemoteNodeDelete(nodeId: string): void {
+    if (this.mmpService.existNode(nodeId)) {
+      this.mmpService.removeNode(nodeId, false);
+    }
+  }
+
+  // Applies a Y.Doc property change to MMP
+  private applyYDocPropertyToMmp(
+    nodeId: string,
+    yjsKey: string,
+    value: unknown
+  ): void {
+    for (const update of resolveMmpPropertyUpdate(yjsKey, value)) {
+      this.mmpService.updateNode(update.prop, update.val, false, false, nodeId);
+    }
+  }
+
+  private setupYjsMapOptionsObserver(): void {
+    const optionsMap = this.yDoc.getMap('mapOptions');
+    this.yjsOptionsObserver = (_: unknown, transaction: Y.Transaction) => {
+      if (transaction.local) return;
+      this.applyRemoteMapOptions();
+    };
+    optionsMap.observe(this.yjsOptionsObserver);
+  }
+
+  private applyRemoteMapOptions(): void {
+    const optionsMap = this.yDoc.getMap('mapOptions');
+    const options: CachedMapOptions = {
+      fontMaxSize: (optionsMap.get('fontMaxSize') as number) ?? 28,
+      fontMinSize: (optionsMap.get('fontMinSize') as number) ?? 6,
+      fontIncrement: (optionsMap.get('fontIncrement') as number) ?? 2,
+    };
+    this.mmpService.updateAdditionalMapOptions(options);
+  }
+
+  // ─── Yjs: Awareness (presence, selection, client list) ───────
+
+  private setupYjsAwareness(): void {
+    const awareness = this.wsProvider.awareness;
+    const color = this.resolveClientColor(awareness);
+    this.clientColor = color;
+
+    awareness.setLocalStateField('user', {
+      color,
+      selectedNodeId: null,
+    });
+
+    this.yjsAwarenessHandler = () => {
+      this.updateFromAwareness();
+    };
+    awareness.on('change', this.yjsAwarenessHandler);
+
+    // Process awareness states already received before the listener was registered
+    this.updateFromAwareness();
+  }
+
+  // Pick a color that doesn't collide with other clients
+  private resolveClientColor(
+    awareness: WebsocketProvider['awareness']
+  ): string {
+    const usedColors = new Set<string>();
+    for (const [, state] of awareness.getStates()) {
+      if (state?.user?.color) usedColors.add(state.user.color);
+    }
+    return resolveClientColor(this.clientColor, usedColors);
+  }
+
+  private updateYjsAwarenessSelection(nodeId: string | null): void {
+    if (!this.wsProvider) return;
+    this.wsProvider.awareness.setLocalStateField('user', {
+      color: this.clientColor,
+      selectedNodeId: nodeId,
+    });
+  }
+
+  // Rebuild client list and highlights from awareness states
+  private updateFromAwareness(): void {
+    const newMapping = this.buildColorMappingFromAwareness();
+    const affectedNodes = this.findAffectedNodes(newMapping);
+    this.colorMapping = newMapping;
+    this.rehighlightNodes(affectedNodes);
+    this.extractClientListForSubscriber();
+  }
+
+  private buildColorMappingFromAwareness(): ClientColorMapping {
+    const awareness = this.wsProvider.awareness;
+    const localClientId = this.yDoc.clientID;
+    const mapping: ClientColorMapping = {};
+
+    for (const [clientId, state] of awareness.getStates()) {
+      if (!state?.user) continue;
+      const isSelf = clientId === localClientId;
+      mapping[String(clientId)] = {
+        color: isSelf ? DEFAULT_SELF_COLOR : state.user.color || DEFAULT_COLOR,
+        nodeId: state.user.selectedNodeId || '',
+      };
+    }
+    return mapping;
+  }
+
+  // Collect node IDs that need re-highlighting
+  private findAffectedNodes(newMapping: ClientColorMapping): Set<string> {
+    return findAffectedNodes(this.colorMapping, newMapping);
+  }
+
+  private rehighlightNodes(nodeIds: Set<string>): void {
+    for (const nodeId of nodeIds) {
+      if (!this.mmpService.existNode(nodeId)) continue;
+      const color = this.colorForNode(nodeId);
+      this.mmpService.highlightNode(nodeId, color, false);
+    }
+  }
+
+  // ─── Y.Doc conversion utilities ──────────────────────────────
+
+  private populateYMapFromNodeProps(
+    yNode: Y.Map<unknown>,
+    nodeProps: ExportNodeProperties
+  ): void {
+    populateYMapFromNodeProps(yNode, nodeProps);
+  }
+
+  private yMapToNodeProps(yNode: Y.Map<unknown>): ExportNodeProperties {
+    return yMapToNodeProps(yNode);
+  }
+
+  // ─── Shared utilities ────────────────────────────────────────
+
+  private setConnectionStatusSubject(value: ConnectionStatus) {
+    this.connectionStatusSubject.next(value);
+  }
+
+  private colorForNode(nodeId: string): string {
+    const matchingClient = this.clientForNode(nodeId);
+    return matchingClient ? this.colorMapping[matchingClient].color : '';
+  }
+
+  private clientForNode(nodeId: string): string {
+    return Object.keys(this.colorMapping)
+      .filter((key: string) => this.colorMapping[key]?.nodeId === nodeId)
+      .shift();
+  }
+
+  private extractClientListForSubscriber(): void {
+    this.clientListSubject.next(
+      Object.values(this.colorMapping).map(
+        (e: ClientColorMappingValue) => e?.color
+      )
+    );
+  }
+
+  /**
+   * Store private map data locally for admin access
+   */
+  private storePrivateMapData(privateServerMap: PrivateServerMap): void {
+    const serverMap = privateServerMap.map;
+    this.storageService.set(serverMap.uuid, {
+      adminId: privateServerMap.adminId,
+      modificationSecret: privateServerMap.modificationSecret,
+      ttl: serverMap.deletedAt,
+      rootName: serverMap.data[0].name,
+      createdAt: serverMap.createdAt,
+    });
+  }
+
+  /**
+   * Setup state for newly created map
+   */
+  private setupNewMapState(privateServerMap: PrivateServerMap): void {
+    this.prepareMap(privateServerMap.map);
+    this.settingsService.setEditMode(true);
+    this.modificationSecret = privateServerMap.modificationSecret;
+  }
+
+  private async fetchMapFromServer(id: string): Promise<ServerMap> {
+    const response = await this.httpService.get(API_URL.ROOT, '/maps/' + id);
+    if (!response.ok) return null;
+    const json: ServerMap = await response.json();
+    return json;
+  }
+
+  private async postMapToServer(): Promise<PrivateServerMap> {
+    const response = await this.httpService.post(
+      API_URL.ROOT,
+      '/maps/',
+      JSON.stringify({
+        rootNode:
+          this.settingsService.getCachedUserSettings().mapOptions.rootNode,
+      })
+    );
+
+    return response.json();
+  }
+
+  /**
+   * Return the key of the map in the storage
+   */
+  private createKey(uuid: string): string {
+    return `map-${uuid}`;
+  }
+
+  /**
+   * Converts server map
+   */
+  private convertServerMapToMmp(serverMap: ServerMap): MapProperties {
+    return Object.assign({}, serverMap, {
+      lastModified: Date.parse(serverMap.lastModified),
+      deletedAt: Date.parse(serverMap.deletedAt),
+      createdAt: Date.parse(serverMap.createdAt),
+    });
+  }
+
+  private prepareMap(serverMap: ServerMap) {
+    const mapKey = this.createKey(serverMap.uuid);
+    const mapProps = this.convertServerMapToMmp(serverMap);
+    this.attachMap({
+      key: mapKey,
+      cachedMap: { ...mapProps, ...{ options: serverMap.options } },
+    });
+    this.mmpService.updateAdditionalMapOptions(serverMap.options);
+  }
+
+  private async updateCachedMapForAdmin(serverMap: ServerMap) {
+    const map: CachedAdminMapValue | null = (await this.storageService.get(
+      serverMap.uuid
+    )) as CachedAdminMapValue | null;
+    if (map) {
+      map.ttl = new Date(serverMap.deletedAt);
+      map.rootName = serverMap.data?.[0]?.name;
+      this.storageService.set(serverMap.uuid, map);
+    }
   }
 }
