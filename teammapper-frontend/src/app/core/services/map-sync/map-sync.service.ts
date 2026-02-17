@@ -271,7 +271,7 @@ export class MapSyncService implements OnDestroy {
         modificationSecret: map.modificationSecret,
         ttl: map.ttl ? new Date(map.ttl) : new Date(),
         rootName: map.rootName,
-        createdAt: new Date(map.createdAt)
+        createdAt: new Date(map.createdAt),
       },
     }));
   }
