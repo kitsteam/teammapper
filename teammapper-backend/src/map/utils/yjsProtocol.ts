@@ -7,9 +7,6 @@ import * as decoding from 'lib0/decoding'
 // Message types matching y-websocket client protocol
 export const MESSAGE_SYNC = 0
 export const MESSAGE_AWARENESS = 1
-// Custom message type for communicating write access to clients
-// (types 2=auth and 3=queryAwareness are reserved by y-websocket)
-export const MESSAGE_WRITE_ACCESS = 4
 
 // WebSocket close codes (4000-4999 private-use range per RFC 6455)
 export const WS_CLOSE_MISSING_PARAM = 4000
@@ -51,6 +48,16 @@ export const encodeSyncStep1Message = (doc: Y.Doc): Uint8Array => {
   return encoding.toUint8Array(encoder)
 }
 
+// Encodes a SyncStep2 message (full doc state) for immediate client hydration.
+// Called without a client state vector, so it encodes the entire doc — not a
+// diff. This is intentional: see setupSync() in yjs-gateway for rationale.
+export const encodeSyncStep2Message = (doc: Y.Doc): Uint8Array => {
+  const encoder = encoding.createEncoder()
+  encoding.writeVarUint(encoder, MESSAGE_SYNC)
+  syncProtocol.writeSyncStep2(encoder, doc)
+  return encoding.toUint8Array(encoder)
+}
+
 // Encodes a sync update message for broadcasting doc changes
 export const encodeSyncUpdateMessage = (update: Uint8Array): Uint8Array => {
   const encoder = encoding.createEncoder()
@@ -70,14 +77,6 @@ export const encodeAwarenessMessage = (
     encoder,
     awarenessProtocol.encodeAwarenessUpdate(awareness, clients)
   )
-  return encoding.toUint8Array(encoder)
-}
-
-// Encodes a write-access message to inform the client of its permissions
-export const encodeWriteAccessMessage = (writable: boolean): Uint8Array => {
-  const encoder = encoding.createEncoder()
-  encoding.writeVarUint(encoder, MESSAGE_WRITE_ACCESS)
-  encoding.writeVarUint(encoder, writable ? 1 : 0)
   return encoding.toUint8Array(encoder)
 }
 

@@ -13,7 +13,6 @@ import * as syncProtocol from 'y-protocols/sync'
 import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
-import configService from '../../config.service'
 import { YjsDocManagerService } from '../services/yjs-doc-manager.service'
 import { YjsPersistenceService } from '../services/yjs-persistence.service'
 import { MapsService } from '../services/maps.service'
@@ -36,9 +35,9 @@ import {
   checkWriteAccess,
   toUint8Array,
   encodeSyncStep1Message,
+  encodeSyncStep2Message,
   encodeSyncUpdateMessage,
   encodeAwarenessMessage,
-  encodeWriteAccessMessage,
   processReadOnlySyncMessage,
   parseAwarenessClientIds,
 } from '../utils/yjsProtocol'
@@ -73,11 +72,6 @@ export class YjsGateway implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    if (!configService.isYjsEnabled()) {
-      this.logger.log('Yjs disabled, skipping WebSocket server setup')
-      return
-    }
-
     const server = this.httpAdapterHost.httpAdapter.getHttpServer()
     this.wss = new WebSocketServer({
       noServer: true,
@@ -341,9 +335,29 @@ export class YjsGateway implements OnModuleInit, OnModuleDestroy {
       this.handleClose(ws, mapId, awareness)
     })
 
+    // Sync strategy: we proactively push the full doc state to the client
+    // rather than waiting for the standard SyncStep1/SyncStep2 handshake.
+    //
+    // Why: handleConnection is async (DB lookup, doc creation) so the
+    // ws.on('message') handler above is registered late. The y-websocket
+    // client sends its SyncStep1 immediately on open, which may arrive
+    // before the handler exists and get silently dropped. Without a
+    // proactive push the client would never receive the doc.
+    //
+    // Trade-off: the proactive SyncStep2 always sends the full doc state
+    // (not a diff), so reconnecting clients receive redundant data. For
+    // mind-map-sized documents this is negligible. A message-buffering
+    // approach would be more efficient for large documents.
+    //
+    // Message order:
+    //   1. SyncStep1   — server state vector (triggers client's SyncStep2)
+    //   2. SyncStep2   — full doc state for immediate hydration
+    //   3. Awareness   — existing cursors/presence
+    //
+    // Write-access is communicated via the HTTP GET /api/maps/:id response.
     this.send(ws, encodeSyncStep1Message(doc))
+    this.send(ws, encodeSyncStep2Message(doc))
     this.sendAwarenessStates(ws, awareness)
-    this.send(ws, encodeWriteAccessMessage(writable))
   }
 
   private handleMessage(
