@@ -7,9 +7,13 @@ import {
   NotFoundException,
   Param,
   Post,
+  Query,
   Logger,
+  Optional,
+  Inject,
 } from '@nestjs/common'
 import { MapsService } from '../services/maps.service'
+import { checkWriteAccess } from '../utils/yjsProtocol'
 import { YjsDocManagerService } from '../services/yjs-doc-manager.service'
 import { YjsGateway } from './yjs-gateway.service'
 import {
@@ -22,26 +26,37 @@ import {
 } from '../types'
 import MalformedUUIDError from '../services/uuid.error'
 import { EntityNotFoundError } from 'typeorm'
-import configService from '../../config.service'
 
 @Controller('api/maps')
 export default class MapsController {
   private readonly logger = new Logger(MapsController.name)
   constructor(
     private mapsService: MapsService,
-    private yjsDocManager: YjsDocManagerService,
-    private yjsGateway: YjsGateway
+    @Optional()
+    @Inject(YjsDocManagerService)
+    private yjsDocManager?: YjsDocManagerService,
+    @Optional()
+    @Inject(YjsGateway)
+    private yjsGateway?: YjsGateway
   ) {}
 
   @Get(':id')
-  async findOne(@Param('id') mapId: string): Promise<IMmpClientMap | void> {
+  async findOne(
+    @Param('id') mapId: string,
+    @Query('secret') secret?: string
+  ): Promise<IMmpClientMap | void> {
     try {
-      // If we update lastAccessed first, we guarantee that the exportMapToClient returns a fresh map that includes an up-to-date lastAccessed field
       await this.mapsService.updateLastAccessed(mapId)
       const map = await this.mapsService.exportMapToClient(mapId)
       if (!map) throw new NotFoundException()
 
-      return map
+      const fullMap = await this.mapsService.findMap(mapId)
+      const writable = checkWriteAccess(
+        fullMap?.modificationSecret ?? null,
+        secret ?? null
+      )
+
+      return { ...map, writable }
     } catch (e) {
       if (e instanceof MalformedUUIDError || e instanceof EntityNotFoundError) {
         throw new NotFoundException()
@@ -67,7 +82,7 @@ export default class MapsController {
   ): Promise<void> {
     const mmpMap = await this.mapsService.findMap(mapId)
     if (mmpMap && mmpMap.adminId === body.adminId) {
-      if (configService.isYjsEnabled()) {
+      if (this.yjsGateway && this.yjsDocManager) {
         this.yjsGateway.closeConnectionsForMap(mapId)
         this.yjsDocManager.destroyDoc(mapId)
       }

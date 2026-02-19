@@ -2,8 +2,6 @@ import * as Y from 'yjs';
 import { ExportNodeProperties } from '@mmp/map/types';
 import { ReversePropertyMapping } from './server-types';
 
-const MESSAGE_WRITE_ACCESS = 4;
-
 export type ClientColorMapping = Record<string, ClientColorMappingValue>;
 
 export interface ClientColorMappingValue {
@@ -71,14 +69,6 @@ export function buildYjsWsUrl(): string {
   const baseHref = document.querySelector('base')?.getAttribute('href') ?? '/';
   const path = baseHref.endsWith('/') ? baseHref : baseHref + '/';
   return `${protocol}//${host}${path}yjs`;
-}
-
-// Returns true for writable, false for read-only, null if not a write-access message
-export function parseWriteAccessBytes(data: Uint8Array): boolean | null {
-  if (data.length >= 2 && data[0] === MESSAGE_WRITE_ACCESS) {
-    return data[1] === 1;
-  }
-  return null;
 }
 
 export function resolveClientColor(
@@ -180,6 +170,44 @@ export const sortParentFirst = (
   const ordered = collectBreadthFirst([root], childrenOf);
   return appendOrphans(ordered, nodes);
 };
+
+// Collects all descendant node IDs by building a parent-to-children
+// index in a single O(N) pass, then BFS-traversing from the given node.
+export function collectDescendantIds(
+  nodesMap: Y.Map<Y.Map<unknown>>,
+  nodeId: string
+): string[] {
+  const childrenOf = new Map<string, string[]>();
+  nodesMap.forEach((yNode: Y.Map<unknown>, key: string) => {
+    const parent = yNode.get('parent') as string | null;
+    if (parent != null) {
+      const siblings = childrenOf.get(parent);
+      if (siblings) {
+        siblings.push(key);
+      } else {
+        childrenOf.set(parent, [key]);
+      }
+    }
+  });
+
+  const descendants: string[] = [];
+  const visited = new Set<string>([nodeId]);
+  const queue = [nodeId];
+  let i = 0;
+
+  while (i < queue.length) {
+    const children = childrenOf.get(queue[i++]) ?? [];
+    for (const child of children) {
+      if (!visited.has(child)) {
+        visited.add(child);
+        descendants.push(child);
+        queue.push(child);
+      }
+    }
+  }
+
+  return descendants;
+}
 
 export function resolveCompoundMmpUpdates(
   mapping: Record<string, string>,
