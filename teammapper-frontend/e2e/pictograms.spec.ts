@@ -46,9 +46,9 @@ test('pictogram search results appear immediately', async ({ page }) => {
     await route.fulfill({ response, json });
   });
 
-  // Mock the ARASAAC pictogram search API
+  // Mock the ARASAAC pictogram search API (proxied through backend as /arasaac/api/pictograms/...)
   await page.route(
-    '**/api.arasaac.org/v1/pictograms/*/search/*',
+    '**/arasaac/api/pictograms/*/search/*',
     async route => {
       await route.fulfill({
         status: 200,
