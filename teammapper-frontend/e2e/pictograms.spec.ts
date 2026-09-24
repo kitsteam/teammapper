@@ -47,16 +47,13 @@ test('pictogram search results appear immediately', async ({ page }) => {
   });
 
   // Mock the ARASAAC pictogram search API (proxied through backend as /arasaac/api/pictograms/...)
-  await page.route(
-    '**/arasaac/api/pictograms/*/search/*',
-    async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockPictogramResponse),
-      });
-    }
-  );
+  await page.route('**/arasaac/api/pictograms/*/search/*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockPictogramResponse),
+    });
+  });
 
   await page.goto('/');
   await page.getByText('Create mind map').click();

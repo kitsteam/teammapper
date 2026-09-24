@@ -6,13 +6,17 @@
         <ng-container>
           @if (cachedMapEntry.cachedAdminMapValue.createdAt) {
             <mat-list-item class="item-startpage">
-              <a href="{{ getMapUrl(cachedMapEntry) }}">{{
-                getMapTitle(cachedMapEntry)
-                }}
+              <a href="{{ getMapUrl(cachedMapEntry) }}"
+                >{{ getMapTitle(cachedMapEntry) }}
                 vom
-                {{ cachedMapEntry.cachedAdminMapValue.createdAt | date : 'dd.MM.yyyy' }}
+                {{
+                  cachedMapEntry.cachedAdminMapValue.createdAt
+                    | date: 'dd.MM.yyyy'
+                }}
                 um
-                {{ cachedMapEntry.cachedAdminMapValue.createdAt | date : 'HH:mm' }}
+                {{
+                  cachedMapEntry.cachedAdminMapValue.createdAt | date: 'HH:mm'
+                }}
                 Uhr
               </a>
             </mat-list-item>
@@ -23,8 +27,6 @@
   </ng-container>
 } @else {
   <ng-template>
-    <mat-list>
-      -
-    </mat-list>
+    <mat-list> - </mat-list>
   </ng-template>
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
-import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
+import { CachedAdminMapEntry } from '@teammapper/shared';
 import { Router } from '@angular/router';
 import { MapListComponent } from './map-list.component';
 import { MatGridListModule } from '@angular/material/grid-list';
@@ -27,10 +27,9 @@ export class StartComponent implements OnInit {
   private settingsService = inject(SettingsService);
   private router = inject(Router);
 
-  public projectName: string;
   public faGithub = faGithub;
   public breakpoint: number;
-  public height: number;
+  public height: number = window.innerHeight;
   public cachedAdminMapEntries: CachedAdminMapEntry[];
 
   constructor() {
@@ -49,7 +48,7 @@ export class StartComponent implements OnInit {
   public getMapUrl(entry: CachedAdminMapEntry): string {
     return this.router
       .createUrlTree([`/map/${entry.id}`], {
-        fragment: entry.cachedAdminMapValue.modificationSecret,
+        fragment: entry.cachedAdminMapValue.modificationSecret ?? undefined,
       })
       .toString();
   }
