@@ -3,7 +3,8 @@
 .about-modal-section {
   max-width: 500px;
   hyphens: auto;
-  float: left;
+  // Contains the floating logo, so the next section starts below it.
+  display: flow-root;
 
   a {
     text-decoration: none;
