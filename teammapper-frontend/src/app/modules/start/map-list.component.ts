@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
-import { CachedAdminMapEntry } from 'src/app/shared/models/cached-map.model';
+import { CachedAdminMapEntry } from '@teammapper/shared';
 import { Router } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { CommonModule } from '@angular/common';
@@ -30,7 +30,7 @@ export class MapListComponent implements OnInit {
   public getMapUrl(entry: CachedAdminMapEntry): string {
     return this.router
       .createUrlTree([`/map/${entry.id}`], {
-        fragment: entry.cachedAdminMapValue.modificationSecret,
+        fragment: entry.cachedAdminMapValue.modificationSecret ?? undefined,
       })
       .toString();
   }
