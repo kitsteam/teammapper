@@ -27,6 +27,7 @@ describe('MindmapsOverview', () => {
         adminId,
         modificationSecret: null,
         ttl: new Date('2099-01-01'),
+        createdAt: null,
         rootName: id,
       },
     };
