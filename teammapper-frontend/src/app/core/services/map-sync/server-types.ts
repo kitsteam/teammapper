@@ -31,7 +31,7 @@ interface ServerMapInfo extends Omit<ClientMapInfo, 'ttl'> {
 
 const ReversePropertyMapping = {
   name: 'name',
-  locked: 'locked',
+  protected: 'protected',
   coordinates: 'coordinates',
   image: {
     src: 'imageSrc',

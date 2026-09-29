@@ -14,7 +14,6 @@ import { MmpService } from '../mmp/mmp.service';
 import { SettingsService } from '../settings/settings.service';
 import { UtilsService } from '../utils/utils.service';
 import { ToastrService } from 'ngx-toastr';
-import { API_URL, HttpService } from '../../http/http.service';
 import {
   ClientColorMapping,
   populateYMapFromNodeProps,
@@ -106,8 +105,7 @@ export class YjsSyncService {
     private mmpService: MmpService,
     private settingsService: SettingsService,
     private utilsService: UtilsService,
-    private toastrService: ToastrService,
-    private httpService: HttpService
+    private toastrService: ToastrService
   ) {}
 
   /**
@@ -140,8 +138,13 @@ export class YjsSyncService {
 
   // ─── Public API ─────────────────────────────────────────────
 
+  /**
+   * Sets whether this client may edit the map. Edit mode follows the flag from
+   * the first sync on, whichever of the sync and this call comes first.
+   */
   setWritable(writable: boolean): void {
     this.yjsWritable = writable;
+    if (this.yjsSynced) this.settingsService.setEditMode(writable);
   }
 
   undo(): void {
@@ -152,12 +155,23 @@ export class YjsSyncService {
     this.yUndoManager?.redo();
   }
 
-  updateMapOptions(options?: CachedMapOptions): void {
-    this.writeMapOptionsToYDoc(options);
+  /**
+   * Run a local change that writes several nodes as one transaction. Yjs
+   * joins the transactions of the node writes into this one, so peers receive
+   * a single update and one undo reverts the whole change.
+   */
+  transactLocally(change: () => void): void {
+    if (!this.yDoc) {
+      change();
+      return;
+    }
+    this.yUndoManager?.stopCapturing();
+    this.doc.transact(change, LOCAL_ORIGIN);
+    this.yUndoManager?.stopCapturing();
   }
 
-  async deleteMap(adminId: string): Promise<void> {
-    await this.deleteMapViaHttp(adminId);
+  updateMapOptions(options?: CachedMapOptions): void {
+    this.writeMapOptionsToYDoc(options);
   }
 
   // ─── Connection lifecycle ───────────────────────────────────
@@ -579,15 +593,6 @@ export class YjsSyncService {
       optionsMap.set('fontMinSize', options.fontMinSize);
       optionsMap.set('fontIncrement', options.fontIncrement);
     }, LOCAL_ORIGIN);
-  }
-
-  private async deleteMapViaHttp(adminId: string): Promise<void> {
-    const mapId = this.ctx.getAttachedMap().cachedMap.uuid;
-    await this.httpService.delete(
-      API_URL.ROOT,
-      `/maps/${mapId}`,
-      JSON.stringify({ adminId })
-    );
   }
 
   // ─── Y.Doc observers (Y.Doc → MMP) ─────────────────────────
