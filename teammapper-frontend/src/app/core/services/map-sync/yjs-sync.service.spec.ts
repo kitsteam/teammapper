@@ -2,6 +2,7 @@ import { YjsSyncService } from './yjs-sync.service';
 import * as Y from 'yjs';
 import { ExportNodeProperties } from '@teammapper/shared';
 import { MmpService } from '../mmp/mmp.service';
+import { SettingsService } from '../settings/settings.service';
 import { MapSyncContext } from './map-sync-context';
 import { populateYMapFromNodeProps } from './yjs-utils';
 import {
@@ -30,10 +31,14 @@ function internals(service: YjsSyncService): YjsSyncInternals {
 
 describe('YjsSyncService', () => {
   describe('setWritable', () => {
+    let settingsService: jest.Mocked<SettingsService>;
     let service: YjsSyncService;
 
     beforeEach(() => {
-      service = createService();
+      settingsService = {
+        setEditMode: jest.fn(),
+      } as unknown as jest.Mocked<SettingsService>;
+      service = createService(undefined, createMockContext(), settingsService);
     });
 
     it('sets yjsWritable to true', () => {
@@ -46,6 +51,20 @@ describe('YjsSyncService', () => {
       service.setWritable(false);
 
       expect(internals(service).yjsWritable).toBe(false);
+    });
+
+    it('does not change edit mode before the first sync', () => {
+      service.setWritable(true);
+
+      expect(settingsService.setEditMode).not.toHaveBeenCalled();
+    });
+
+    it('sets edit mode when called after the first sync', () => {
+      internals(service).yjsSynced = true;
+
+      service.setWritable(true);
+
+      expect(settingsService.setEditMode).toHaveBeenCalledWith(true);
     });
   });
 
@@ -205,6 +224,34 @@ describe('YjsSyncService', () => {
       service.undo();
 
       expect(nodesMap.get('root')?.get('coordinates')).toEqual({ x: 5, y: 5 });
+    });
+
+    it('sends a branch protection as one update that one undo reverts', () => {
+      const doc = internals(service).yDoc;
+      const nodesMap = seedRootNode('root');
+      seedRootNode('child');
+      const updates = jest.fn();
+      doc.on('update', updates);
+
+      service.transactLocally(() => {
+        for (const [id, flag] of [
+          ['child', false],
+          ['root', true],
+        ] as const) {
+          handlers['nodeUpdate']({
+            nodeProperties: { id, protected: flag },
+            changedProperty: 'protected',
+          });
+        }
+      });
+      const updatesSent = updates.mock.calls.length;
+      service.undo();
+
+      expect({
+        updatesSent,
+        root: nodesMap.get('root')?.get('protected'),
+        child: nodesMap.get('child')?.get('protected'),
+      }).toEqual({ updatesSent: 1, root: undefined, child: undefined });
     });
 
     describe('on a receiving client', () => {

@@ -88,8 +88,7 @@ export class MapSyncService implements OnDestroy {
       this.mmpService,
       this.settingsService,
       this.utilsService,
-      this.toastrService,
-      this.httpService
+      this.toastrService
     );
 
     this.mmpService.registerImageHandlers({
@@ -199,12 +198,35 @@ export class MapSyncService implements OnDestroy {
     this.syncService.redo();
   }
 
+  /**
+   * Protect or release the branch of the selected node in one transaction,
+   * so peers never see a child released before its parent is protected.
+   */
+  public toggleBranchProtection(): void {
+    this.syncService.transactLocally(() =>
+      this.mmpService.toggleBranchProtection()
+    );
+  }
+
   public updateMapOptions(options?: CachedMapOptions) {
     this.syncService.updateMapOptions(options);
   }
 
-  public async deleteMap(adminId: string): Promise<void> {
-    await this.syncService.deleteMap(adminId);
+  // Deletes any map the admin id belongs to, not only the attached one, so
+  // the map list can delete maps that are not open. Resolves to false on an
+  // error status or a failed request. The server answers 200 to a wrong admin
+  // id as well, so true does not prove the map is gone.
+  public async deleteMap(mapId: string, adminId: string): Promise<boolean> {
+    try {
+      const response = await this.httpService.delete(
+        API_URL.ROOT,
+        `/maps/${encodeURIComponent(mapId)}`,
+        JSON.stringify({ adminId })
+      );
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   public async fetchUserMapsFromServer(): Promise<CachedAdminMapEntry[]> {
@@ -344,7 +366,6 @@ export class MapSyncService implements OnDestroy {
 
   private setupNewMapState(privateServerMap: PrivateServerMap): void {
     this.prepareMap(privateServerMap.map);
-    this.settingsService.setEditMode(true);
     this.modificationSecret = privateServerMap.modificationSecret;
   }
 
