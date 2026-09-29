@@ -1,13 +1,10 @@
-<h2 mat-dialog-title>{{ applicationName }} {{ version }}</h2>
 <mat-dialog-content>
   <div class="about-modal-section">
     <img
       class="about-kits-logo"
       alt="kits logo"
       src="./assets/images/kits-logo.svg"
-      width="150" />
-    {{ 'PAGES.ABOUT.INTRODUCTION.APPLICATION_DESCRIPTION' | translate }}
-    <br /><br />
+      width="80" />
     <a
       href="https://github.com/kitsteam/teammapper"
       class="link"
@@ -21,6 +18,10 @@
   </div>
   <br />
   <div class="about-modal-section">
+    <p>
+      TeamMapper ist ein Angebot des Niedersächsischen Landesinstituts für
+      Qualitätsentwicklung (NLQ).
+    </p>
     <div class="hint-box">
       {{ 'MODALS.INFO.DELETION_MOVED' | translate }}
     </div>
