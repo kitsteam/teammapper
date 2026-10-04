@@ -12,9 +12,47 @@ import {
   NodeBasicsSchema,
   NodeSchema,
   sanitizeIssues,
+  NodePropertySchemas,
 } from './index';
+import type { NodeProperty } from '../models';
 
 describe('Shared Validation Schemas', () => {
+  describe('NodePropertySchemas', () => {
+    it.each<[NodeProperty, unknown]>([
+      ['name', 'A name'],
+      ['protected', true],
+      ['coordinates', { x: 1, y: 2 }],
+      ['imageSrc', 'image:5f0c4b1e-3a8d-4c6e-9f2a-7b1d2e3f4a5b'],
+      ['imageSize', 60],
+      ['linkHref', 'https://example.com'],
+      ['backgroundColor', '#f9f9f9'],
+      ['branchColor', ''],
+      ['fontWeight', 'bold'],
+      ['fontStyle', 'italic'],
+      ['fontSize', 16],
+      ['nameColor', null],
+    ])('accepts %s %p', (property, value) => {
+      expect(v.safeParse(NodePropertySchemas[property], value).success).toBe(
+        true
+      );
+    });
+
+    it.each<[NodeProperty, unknown]>([
+      ['name', 42],
+      ['protected', 'yes'],
+      ['coordinates', { x: 'left', y: 0 }],
+      ['imageSize', '60'],
+      ['linkHref', 'javascript:alert(1)'],
+      ['backgroundColor', 'red'],
+      ['fontWeight', 'x'.repeat(1000)],
+      ['fontSize', 'big'],
+    ])('refuses %s %p', (property, value) => {
+      expect(v.safeParse(NodePropertySchemas[property], value).success).toBe(
+        false
+      );
+    });
+  });
+
   describe('Sub-schemas', () => {
     it('validates ColorSchema with valid hex, null, or empty object', () => {
       expect(v.safeParse(ColorSchema, {}).success).toBe(true);
@@ -38,6 +76,10 @@ describe('Shared Validation Schemas', () => {
         v.safeParse(ColorSchema, { name: 'expression(alert(1))' }).success
       ).toBe(false);
       expect(v.safeParse(ColorSchema, { name: 123 }).success).toBe(false);
+    });
+
+    it('accepts an empty color, which means no color', () => {
+      expect(v.safeParse(ColorSchema, { branch: '' }).success).toBe(true);
     });
 
     it('validates CoordinatesSchema', () => {
@@ -92,6 +134,7 @@ describe('Shared Validation Schemas', () => {
     it('validates LinkSchema', () => {
       expect(v.safeParse(LinkSchema, {}).success).toBe(true);
       expect(v.safeParse(LinkSchema, { href: null }).success).toBe(true);
+      expect(v.safeParse(LinkSchema, { href: '' }).success).toBe(true);
       expect(
         v.safeParse(LinkSchema, { href: 'https://example.com' }).success
       ).toBe(true);
@@ -167,29 +210,15 @@ describe('Shared Validation Schemas', () => {
       },
       protected: true,
       k: 1.5,
-      hidden: true,
-      hasHiddenChildNodes: true,
     };
 
-    it('successfully parses a canonical valid node with folding properties', () => {
-      const result = v.safeParse(NodeSchema, validNode);
+    it('accepts and drops the hidden keys of older files', () => {
+      const legacy = { ...validNode, hidden: true, hasHiddenChildNodes: true };
+      const result = v.safeParse(NodeSchema, legacy);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.output.hidden).toBe(true);
-        expect(result.output.hasHiddenChildNodes).toBe(true);
-      }
-    });
-
-    it('defaults hidden and hasHiddenChildNodes to false when omitted', () => {
-      const withoutFolding = { ...validNode };
-      delete (withoutFolding as { hidden?: boolean }).hidden;
-      delete (withoutFolding as { hasHiddenChildNodes?: boolean })
-        .hasHiddenChildNodes;
-      const result = v.safeParse(NodeSchema, withoutFolding);
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.output.hidden).toBe(false);
-        expect(result.output.hasHiddenChildNodes).toBe(false);
+        expect(result.output).not.toHaveProperty('hidden');
+        expect(result.output).not.toHaveProperty('hasHiddenChildNodes');
       }
     });
 

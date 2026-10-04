@@ -2,10 +2,12 @@
  * Stand-in for `@teammapper/mmp` in the frontend unit tests. `jest.config.js`
  * maps the package here through `moduleNameMapper`.
  *
- * Only the property table is stubbed. `MmpMap` appears in the frontend in type
- * position alone, and `MmpService.create` is reached by one spec, which mocks
- * the module itself with `jest.mock`. The table mirrors `PropertyMapping` in
- * `packages/mmp/src/map/handlers/nodes.ts`, so the Yjs bridge can index it.
+ * Only the property table is stubbed. `MmpMap`, `MapData`, `MapDataChange`,
+ * `MapNodeRecord` and `OptionParameters` appear in the frontend in type
+ * position alone, and the one spec that calls `MmpService.create` mocks the
+ * module itself with `jest.mock`. The table mirrors `PropertyMapping` in
+ * `packages/mmp/src/map/data/property-mapping.ts`, so `YjsMapData` can index
+ * it.
  */
 export const NodePropertyMapping = {
   name: ['name'],
@@ -20,5 +22,4 @@ export const NodePropertyMapping = {
   fontStyle: ['font', 'style'],
   fontSize: ['font', 'size'],
   nameColor: ['colors', 'name'],
-  hidden: ['hidden'],
 } as const;

@@ -1,16 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import type { ExportNodeProperties } from '@teammapper/shared';
 import type { Readable } from 'stream';
-import { addTree, createMap } from './helpers';
-
-/** Adds a child to the node named `parent` and names it `name`. */
-async function addChild(page: Page, parent: string, name: string) {
-  await page.getByText(parent, { exact: true }).click();
-  await page.locator('#floating-add-node').click();
-  await page.keyboard.type(name);
-  await page.locator('.map').click();
-  await expect(page.getByText(name, { exact: true })).toBeVisible();
-}
+import { addChild, addTree, createMap } from './helpers';
 
 async function readStream(stream: Readable): Promise<string> {
   const chunks: Buffer[] = [];
@@ -53,8 +44,8 @@ test('creates a tree and adds two levels of children to it', async ({
   const secondRoot = byName('Second tree');
 
   expect(secondRoot).toBeDefined();
-  // The JSON export writes an empty string as the parent of a root.
-  expect(secondRoot?.parent).toBe('');
+  // The JSON export writes null as the parent of a root.
+  expect(secondRoot?.parent).toBeNull();
   expect(secondRoot?.isRoot).toBe(false);
   expect(byName('Tree child')?.parent).toBe(secondRoot?.id);
   expect(byName('Tree grandchild')?.parent).toBe(byName('Tree child')?.id);
@@ -80,7 +71,7 @@ test('pastes a copied tree as a second tree with nothing selected', async ({
   const roots = nodes.filter(node => node.name === 'Copied tree');
   const children = nodes.filter(node => node.name === 'Copied child');
 
-  expect(roots.map(root => root.parent)).toEqual(['', '']);
+  expect(roots.map(root => root.parent)).toEqual([null, null]);
   expect(roots.map(root => root.isRoot)).toEqual([false, false]);
   expect(children.map(child => child.parent).sort()).toEqual(
     roots.map(root => root.id).sort()
@@ -140,8 +131,8 @@ test('imports an old JSON export holding detached nodes as trees', async ({
       byName(name)?.isRoot,
     ])
   ).toEqual([
-    ['', false],
-    ['', false],
+    [null, false],
+    [null, false],
   ]);
   expect(byName('Pasted under note')?.parent).toBe(byName('Legacy note')?.id);
   expect(byName('Note child')?.parent).toBe(byName('Legacy note')?.id);

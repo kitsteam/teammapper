@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { MmpService } from './mmp.service';
+import { MmpService, NODE_FONT_FAMILY } from './mmp.service';
 import { SettingsService } from '../settings/settings.service';
 import { ToastrService } from 'ngx-toastr';
 import { UtilsService } from '../utils/utils.service';
 import * as mmp from '@teammapper/mmp';
 import { Subject } from 'rxjs';
-import { OptionParameters } from '@teammapper/mmp';
+import type { MapData, MmpMap, OptionParameters } from '@teammapper/mmp';
 import { ImageUploadError } from './node-images';
 
 jest.mock('dompurify', () => {
@@ -24,6 +24,19 @@ jest.mock('@teammapper/mmp', () => ({
 
 const REFERENCE = 'image:aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 
+// mmp is mocked, so the map data only has to be passed through.
+const DATA: MapData = {
+  node: () => undefined,
+  nodes: () => [],
+  mainRootId: () => null,
+  addNodes: jest.fn(),
+  updateNode: jest.fn(),
+  removeNode: jest.fn(),
+  replaceMap: jest.fn(),
+  batch: change => change(),
+  subscribe: () => () => undefined,
+};
+
 const downloadFileSpy = jest
   .spyOn(UtilsService, 'downloadFile')
   .mockImplementation(jest.fn());
@@ -37,8 +50,7 @@ describe('MmpService', () => {
 
   const mockMap = {
     instance: {
-      unsubscribeAll: jest.fn(),
-      remove: jest.fn(),
+      destroy: jest.fn(),
       new: jest.fn(),
       zoomIn: jest.fn(),
       zoomOut: jest.fn(),
@@ -46,7 +58,6 @@ describe('MmpService', () => {
       exportAsImage: jest.fn(),
       center: jest.fn(),
       on: jest.fn(),
-      addNodes: jest.fn(),
       addNode: jest.fn(),
       selectNode: jest.fn(),
       exportRootProperties: jest.fn(),
@@ -61,6 +72,7 @@ describe('MmpService', () => {
       pasteNode: jest.fn(),
       pasteTree: jest.fn(),
       toggleBranchVisibility: jest.fn(),
+      childNodesHidden: jest.fn(),
       distributeNodes: jest.fn(),
       nodeChildren: jest.fn(),
       addTree: jest.fn(),
@@ -72,6 +84,10 @@ describe('MmpService', () => {
       update: jest.fn(),
     },
   };
+
+  /** Create the map with no options over `DATA`. */
+  const createMap = () =>
+    service.create('test-id', document.createElement('div'), undefined, DATA);
 
   beforeEach(() => {
     (mmp.create as jest.Mock).mockReturnValue(mockMap);
@@ -132,26 +148,196 @@ describe('MmpService', () => {
     expect(service.hasSelectedNode()).toBe(false);
   });
 
+  describe('before create', () => {
+    it('answers the template and presence queries with defaults', () => {
+      service.highlightNode('node', '#ff0000');
+      service.addNode();
+      service.moveNodeTo('left');
+
+      expect({
+        selected: service.selectNode('left'),
+        hasSelected: service.hasSelectedNode(),
+        exists: service.existNode('node'),
+        protecting: service.protectingNode(),
+        hidden: service.childNodesHidden(),
+      }).toEqual({
+        selected: null,
+        hasSelected: false,
+        exists: false,
+        protecting: null,
+        hidden: false,
+      });
+    });
+
+    it.each([
+      ['zoomIn', () => service.zoomIn()],
+      ['center', () => service.center()],
+      ['addTree', () => service.addTree()],
+      ['editNode', () => service.editNode()],
+      ['toggleBranchVisibility', () => service.toggleBranchVisibility()],
+      ['toggleBranchProtection', () => service.toggleBranchProtection()],
+      ['distributeNodes', () => service.distributeNodes()],
+      ['getRootNode', () => service.getRootNode()],
+    ])(
+      'throws for the command %s, which waits for mapCreated$',
+      (_, command) => {
+        expect(command).toThrow('No mind map has been created yet');
+      }
+    );
+
+    it.each([
+      ['updateNode', () => service.updateNode('fontSize', 14)],
+      ['removeNode', () => service.removeNode('node')],
+      ['copyNode', () => service.copyNode('node')],
+      ['cutNode', () => service.cutNode('node')],
+      ['pasteNode', () => service.pasteNode()],
+    ])('rejects the command %s without a toast', async (_, command) => {
+      await expect(command()).rejects.toThrow(
+        'No mind map has been created yet'
+      );
+      expect(toastrService.error).not.toHaveBeenCalled();
+    });
+
+    it('rejects an import and an export', async () => {
+      await expect(service.new([])).rejects.toThrow(
+        'No mind map has been created yet'
+      );
+      await expect(service.exportMap('json')).rejects.toThrow(
+        'No mind map has been created yet'
+      );
+      expect(downloadFileSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('create', () => {
     it('should create a new mind map', async () => {
       const id = 'test-id';
       const element = document.createElement('div');
-      const options: OptionParameters = { drag: true };
+      const options: OptionParameters = { zoom: true };
+      editModeSubject.next(true);
 
-      await service.create(id, element, options);
+      const created = await service.create(id, element, options, DATA);
 
+      expect(created).toBe(mockMap);
       expect(mmp.create).toHaveBeenCalledWith(
         id,
         element,
-        expect.objectContaining(options)
+        expect.objectContaining({ ...options, edit: true, drag: true }),
+        DATA
       );
+    });
+
+    it('creates the map with an edit mode reported before it existed', async () => {
+      editModeSubject.next(false);
+
+      await service.create(
+        'test-id',
+        document.createElement('div'),
+        { drag: true, edit: true },
+        DATA
+      );
+
+      expect(mmp.create).toHaveBeenCalledWith(
+        'test-id',
+        expect.anything(),
+        expect.objectContaining({ edit: false, drag: false }),
+        DATA
+      );
+    });
+
+    it('creates a read-only map while the edit mode is unknown', async () => {
+      await service.create('test-id', document.createElement('div'), {}, DATA);
+
+      expect(mmp.create).toHaveBeenCalledWith(
+        'test-id',
+        expect.anything(),
+        expect.objectContaining({ edit: false, drag: false }),
+        DATA
+      );
+    });
+
+    it('applies an edit mode reported after the map existed', async () => {
+      await service.create('test-id', document.createElement('div'), {}, DATA);
+
+      editModeSubject.next(true);
+
+      expect(mockMap.options.update).toHaveBeenCalledWith('drag', true);
+      expect(mockMap.options.update).toHaveBeenCalledWith('edit', true);
+    });
+
+    it('creates no map for a create a newer create overtook', async () => {
+      const newerMap = {
+        ...mockMap,
+        instance: { ...mockMap.instance, destroy: jest.fn() },
+      };
+      (mmp.create as jest.Mock).mockReturnValueOnce(newerMap);
+
+      const late = service.create('a', document.createElement('div'), {}, DATA);
+      const newer = service.create(
+        'b',
+        document.createElement('div'),
+        {},
+        DATA
+      );
+
+      await expect(late).resolves.toBeNull();
+      await expect(newer).resolves.toBe(newerMap);
+      expect(mmp.create).toHaveBeenCalledTimes(1);
+      service.remove();
+      expect(newerMap.instance.destroy).toHaveBeenCalled();
+    });
+
+    it('creates no map once remove ran during the create', async () => {
+      const pending = service.create(
+        'a',
+        document.createElement('div'),
+        {},
+        DATA
+      );
+      service.remove();
+
+      await expect(pending).resolves.toBeNull();
+      expect(mmp.create).not.toHaveBeenCalled();
+    });
+
+    it('removes a map that is not the current one and keeps the current one', async () => {
+      const stale = { instance: { destroy: jest.fn() } };
+      await service.create('a', document.createElement('div'), {}, DATA);
+      service.markMapCreated();
+      const reported: boolean[] = [];
+      service.mapCreated$.subscribe(created => reported.push(created));
+
+      service.remove(stale as unknown as MmpMap);
+
+      expect(stale.instance.destroy).toHaveBeenCalled();
+      expect(mockMap.instance.destroy).not.toHaveBeenCalled();
+      expect(reported).toEqual([true]);
+    });
+
+    it('reports the map created once marked, and no longer after remove', async () => {
+      const reported: boolean[] = [];
+      service.mapCreated$.subscribe(created => reported.push(created));
+
+      await service.create('test-id', document.createElement('div'), {}, DATA);
+      service.markMapCreated();
+      service.remove();
+
+      expect(reported).toEqual([false, true, false]);
+    });
+
+    it('draws node names in the font the app ships', async () => {
+      await createMap();
+      const passed: OptionParameters = (mmp.create as jest.Mock).mock
+        .calls[0][2];
+
+      expect(passed.fontFamily).toBe(NODE_FONT_FAMILY);
     });
 
     it('passes a resolver that asks the registered image handlers', async () => {
       const resolveUrl = jest.fn().mockReturnValue('api/maps/m/images/i');
       service.registerImageHandlers({ resolveUrl, upload: jest.fn() });
 
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
       const passed: OptionParameters = (mmp.create as jest.Mock).mock
         .calls[0][2];
 
@@ -163,7 +349,7 @@ describe('MmpService', () => {
       const id = 'test-id';
       const element = document.createElement('div');
 
-      await service.create(id, element);
+      await service.create(id, element, undefined, DATA);
 
       const additionalOptions = service.getAdditionalMapOptions();
       expect(additionalOptions).toEqual({
@@ -176,22 +362,21 @@ describe('MmpService', () => {
 
   describe('remove', () => {
     it('should remove the current map', async () => {
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
       service.remove();
 
-      expect(mockMap.instance.unsubscribeAll).toHaveBeenCalled();
-      expect(mockMap.instance.remove).toHaveBeenCalled();
+      expect(mockMap.instance.destroy).toHaveBeenCalled();
     });
 
     it('should do nothing if no map exists', () => {
       service.remove();
-      expect(mockMap.instance.unsubscribeAll).not.toHaveBeenCalled();
+      expect(mockMap.instance.destroy).not.toHaveBeenCalled();
     });
   });
 
   describe('node operations', () => {
     beforeEach(async () => {
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
     });
 
     describe('addNode', () => {
@@ -203,8 +388,6 @@ describe('MmpService', () => {
         service.addNode();
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '' },
-          true,
-          true,
           'selected',
           undefined
         );
@@ -215,11 +398,26 @@ describe('MmpService', () => {
         service.addNode(props);
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           props,
-          true,
-          true,
           'selected',
           '123'
         );
+      });
+
+      it('selects the new node and edits its name', () => {
+        mockMap.instance.addNode.mockReturnValue({ id: 'new' });
+
+        service.addNode();
+
+        expect(mockMap.instance.selectNode).toHaveBeenLastCalledWith('new');
+        expect(mockMap.instance.editNode).toHaveBeenCalled();
+      });
+
+      it('edits nothing when mmp refuses the node', () => {
+        mockMap.instance.addNode.mockReturnValue(null);
+
+        service.addNode();
+
+        expect(mockMap.instance.editNode).not.toHaveBeenCalled();
       });
 
       it('adds no child with nothing selected', () => {
@@ -239,8 +437,6 @@ describe('MmpService', () => {
         service.addNode();
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '' },
-          true,
-          true,
           'second-root',
           undefined
         );
@@ -254,8 +450,6 @@ describe('MmpService', () => {
         expect(mockMap.instance.selectNode).toHaveBeenCalledWith('named');
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '', parent: 'named' },
-          true,
-          true,
           'named',
           undefined
         );
@@ -267,8 +461,6 @@ describe('MmpService', () => {
         expect(mockMap.instance.selectNode).toHaveBeenCalledWith(undefined);
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '', parent: '' },
-          true,
-          true,
           'selected',
           undefined
         );
@@ -276,10 +468,21 @@ describe('MmpService', () => {
     });
 
     describe('addTree', () => {
-      it('lets mmp add the tree', () => {
+      it('lets mmp add the tree and edits the name of its root', () => {
+        mockMap.instance.addTree.mockReturnValue({ id: 'tree' });
+
         service.addTree();
 
         expect(mockMap.instance.addTree).toHaveBeenCalled();
+        expect(mockMap.instance.editNode).toHaveBeenCalled();
+      });
+
+      it('edits nothing when mmp adds no tree', () => {
+        mockMap.instance.addTree.mockReturnValue(null);
+
+        service.addTree();
+
+        expect(mockMap.instance.editNode).not.toHaveBeenCalled();
       });
     });
 
@@ -434,6 +637,20 @@ describe('MmpService', () => {
 
         expect(mockMap.instance.updateNode).not.toHaveBeenCalled();
       });
+
+      it('writes the moved coordinates of the selected node to the data', () => {
+        mockMap.instance.selectNode.mockReturnValue({
+          id: 'selected',
+          coordinates: { x: 100, y: 50 },
+        });
+
+        service.moveNodeTo('up', 20);
+
+        expect(mockMap.instance.updateNode).toHaveBeenCalledWith(
+          'coordinates',
+          { x: 100, y: 30 }
+        );
+      });
     });
 
     describe('copyNode', () => {
@@ -456,7 +673,7 @@ describe('MmpService', () => {
 
   describe('export operations', () => {
     beforeEach(async () => {
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
     });
 
     describe('exportMap', () => {
@@ -464,6 +681,16 @@ describe('MmpService', () => {
         mockMap.instance.exportRootProperties.mockReturnValue({
           name: 'Test Map',
         });
+      });
+
+      it('exports a map without a main root under an empty name', async () => {
+        mockMap.instance.exportRootProperties.mockReturnValue(null);
+        mockMap.instance.exportAsJSON.mockReturnValue([]);
+
+        const result = await service.exportMap('json');
+
+        expect(result.success).toBe(true);
+        expect(downloadFileSpy.mock.calls[0][0]).toBe('.json');
       });
 
       it('should export to JSON', async () => {
@@ -490,7 +717,7 @@ describe('MmpService', () => {
         };
 
         beforeEach(async () => {
-          await service.create('test-id', document.createElement('div'));
+          await createMap();
           service.registerImageHandlers({
             resolveUrl: jest.fn().mockReturnValue('api/maps/m/images/i'),
             upload: jest.fn(),
@@ -590,9 +817,63 @@ describe('MmpService', () => {
     });
   });
 
+  describe('on', () => {
+    const removeCallback = jest.fn();
+    const changeCallbacks = new Set<(payload: string) => void>();
+
+    beforeEach(async () => {
+      await createMap();
+      changeCallbacks.clear();
+      removeCallback.mockClear();
+      mockMap.instance.on.mockImplementation(
+        (event: string, callback: (payload: string) => void) => {
+          if (event !== 'mapChange') return undefined;
+          changeCallbacks.add(callback);
+          return () => {
+            removeCallback();
+            changeCallbacks.delete(callback);
+          };
+        }
+      );
+    });
+
+    afterEach(() => {
+      mockMap.instance.on.mockReset();
+    });
+
+    const emitChange = (payload: string) =>
+      changeCallbacks.forEach(callback => callback(payload));
+
+    it('gives every subscriber of an event the payload', () => {
+      const first = jest.fn();
+      const second = jest.fn();
+      service.on('mapChange').subscribe(first);
+      service.on('mapChange').subscribe(second);
+
+      emitChange('change');
+
+      expect(first).toHaveBeenCalledWith('change');
+      expect(second).toHaveBeenCalledWith('change');
+    });
+
+    it('removes the mmp callback of an unsubscribed subscriber only', () => {
+      const first = jest.fn();
+      const second = jest.fn();
+      const subscription = service.on('mapChange').subscribe(first);
+      service.on('mapChange').subscribe(second);
+
+      subscription.unsubscribe();
+      emitChange('change');
+
+      expect(removeCallback).toHaveBeenCalledTimes(1);
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledWith('change');
+    });
+  });
+
   describe('distributeNodes', () => {
     beforeEach(async () => {
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
     });
 
     it('should delegate distributing the nodes to the mmp instance', () => {
@@ -602,12 +883,31 @@ describe('MmpService', () => {
     });
   });
 
+  describe('view state', () => {
+    it('reports no hidden child nodes before create', () => {
+      expect(service.childNodesHidden()).toBe(false);
+    });
+
+    describe('after create', () => {
+      beforeEach(async () => {
+        await createMap();
+      });
+
+      it('asks the mmp instance whether the selected node hides its child nodes', () => {
+        mockMap.instance.childNodesHidden.mockReturnValue(true);
+
+        expect(service.childNodesHidden()).toBe(true);
+        expect(mockMap.instance.childNodesHidden).toHaveBeenCalledWith();
+      });
+    });
+  });
+
   describe('addNodeImage', () => {
     const image = new Blob(['image'], { type: 'image/png' });
     let upload: jest.Mock;
 
     beforeEach(async () => {
-      await service.create('test-id', document.createElement('div'));
+      await createMap();
       upload = jest.fn().mockResolvedValue(REFERENCE);
       service.registerImageHandlers({ resolveUrl: jest.fn(), upload });
       mockMap.instance.getSelectedNode.mockReturnValue({ id: 'node-a' });
@@ -631,8 +931,6 @@ describe('MmpService', () => {
       expect(mockMap.instance.updateNode).toHaveBeenCalledWith(
         'imageSrc',
         REFERENCE,
-        true,
-        true,
         'node-a'
       );
     });
@@ -651,7 +949,7 @@ describe('MmpService', () => {
       await adding;
 
       expect(mockMap.instance.updateNode).toHaveBeenCalledTimes(1);
-      expect(mockMap.instance.updateNode.mock.calls[0][4]).toBe('node-a');
+      expect(mockMap.instance.updateNode.mock.calls[0][2]).toBe('node-a');
     });
 
     it('keeps the image and says the storage is full on a 413', async () => {
