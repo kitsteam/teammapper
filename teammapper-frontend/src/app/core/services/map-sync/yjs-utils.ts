@@ -1,11 +1,39 @@
 import * as Y from 'yjs';
-import { ReversePropertyMapping } from './server-types';
 import {
   collectSubtreeIds,
   ExportNodeProperties,
   YJS_SECRET_SUBPROTOCOL_PREFIX,
   YJS_SUBPROTOCOL,
 } from '@teammapper/shared';
+
+/**
+ * The Y.Doc's `nodes` map. Any peer with write access can store any value
+ * under a key, so the type promises no Y.Map: read entries through `nodeAt`
+ * and `nodeEntries`, which skip every other value.
+ */
+export type NodesMap = Y.Map<unknown>;
+
+export function nodesMapOf(doc: Y.Doc): NodesMap {
+  return doc.getMap('nodes');
+}
+
+/** The node stored under `id`, or undefined when the entry is no Y.Map. */
+export function nodeAt<T>(
+  nodesMap: Y.Map<T>,
+  id: string
+): Y.Map<unknown> | undefined {
+  const entry = nodesMap.get(id);
+  return entry instanceof Y.Map ? entry : undefined;
+}
+
+/** Every node of the map with its key, without the entries that are no Y.Map. */
+export function nodeEntries<T>(nodesMap: Y.Map<T>): [string, Y.Map<unknown>][] {
+  const entries: [string, Y.Map<unknown>][] = [];
+  nodesMap.forEach((entry, id) => {
+    if (entry instanceof Y.Map) entries.push([id, entry]);
+  });
+  return entries;
+}
 
 export type ClientColorMapping = Record<string, ClientColorMappingValue>;
 
@@ -14,56 +42,52 @@ export interface ClientColorMappingValue {
   color: string;
 }
 
+/** The keys a node's Y.Map holds, one per node attribute. */
+const NODE_KEYS = [
+  'id',
+  'parent',
+  'k',
+  'name',
+  'isRoot',
+  'protected',
+  'coordinates',
+  'colors',
+  'font',
+  'image',
+  'link',
+] as const satisfies readonly (keyof ExportNodeProperties)[];
+
+/**
+ * A node's attributes as its Y.Map stores them. A peer may write a value of
+ * any type under any key, so every value is unknown until mmp's
+ * `resolveNode` checks it.
+ */
+export type StoredNode = Partial<Record<(typeof NODE_KEYS)[number], unknown>>;
+
+/**
+ * Write every attribute of the node that is not undefined to its Y.Map. A
+ * root's parent goes in as null, also when the caller passes ''.
+ */
 export function populateYMapFromNodeProps(
   yNode: Y.Map<unknown>,
   nodeProps: ExportNodeProperties
 ): void {
-  yNode.set('id', nodeProps.id);
-  yNode.set('parent', nodeProps.parent ?? null);
-  yNode.set('name', nodeProps.name ?? '');
-  yNode.set('isRoot', nodeProps.isRoot ?? false);
-  yNode.set('protected', nodeProps.protected ?? false);
-  yNode.set('k', nodeProps.k ?? 1);
-  yNode.set('coordinates', nodeProps.coordinates ?? { x: 0, y: 0 });
-  yNode.set(
-    'colors',
-    nodeProps.colors ?? { name: '', background: '', branch: '' }
-  );
-  yNode.set('font', nodeProps.font ?? { size: 12, style: '', weight: '' });
-  yNode.set('image', nodeProps.image ?? { src: '', size: 0 });
-  yNode.set('link', nodeProps.link ?? { href: '' });
+  for (const key of NODE_KEYS) {
+    const value = key === 'parent' ? nodeProps.parent || null : nodeProps[key];
+    if (value !== undefined) yNode.set(key, value);
+  }
 }
 
-export function yMapToNodeProps(yNode: Y.Map<unknown>): ExportNodeProperties {
-  return {
-    id: yNode.get('id') as string,
-    parent: (yNode.get('parent') as string) ?? null,
-    k: (yNode.get('k') as number) ?? 1,
-    name: (yNode.get('name') as string) ?? '',
-    isRoot: (yNode.get('isRoot') as boolean) ?? false,
-    protected: (yNode.get('protected') as boolean) ?? false,
-    coordinates: (yNode.get('coordinates') as { x: number; y: number }) ?? {
-      x: 0,
-      y: 0,
-    },
-    colors: (yNode.get('colors') as ExportNodeProperties['colors']) ?? {
-      name: '',
-      background: '',
-      branch: '',
-    },
-    font: (yNode.get('font') as ExportNodeProperties['font']) ?? {
-      size: 12,
-      style: '',
-      weight: '',
-    },
-    image: (yNode.get('image') as ExportNodeProperties['image']) ?? {
-      src: '',
-      size: 0,
-    },
-    link: (yNode.get('link') as ExportNodeProperties['link']) ?? {
-      href: '',
-    },
-  };
+/**
+ * The node as its Y.Map stores it. A key the Y.Map lacks stays absent, and
+ * mmp's `resolveNode` fills it on read.
+ */
+export function yMapToNodeProps(yNode: Y.Map<unknown>): StoredNode {
+  const record: StoredNode = {};
+  for (const key of NODE_KEYS) {
+    if (yNode.has(key)) record[key] = yNode.get(key);
+  }
+  return record;
 }
 
 export function buildYjsWsUrl(): string {
@@ -127,55 +151,15 @@ export function findAffectedNodes(
   return nodes;
 }
 
-export interface MmpPropertyUpdate {
-  prop: string;
-  val: unknown;
-}
-
-export function resolveMmpPropertyUpdate(
-  yjsKey: string,
-  value: unknown
-): MmpPropertyUpdate[] {
-  const mapping =
-    ReversePropertyMapping[yjsKey as keyof typeof ReversePropertyMapping];
-  if (!mapping) return [];
-
-  if (typeof mapping === 'string') {
-    return [{ prop: mapping, val: value }];
-  }
-
-  return resolveCompoundMmpUpdates(
-    mapping as Record<string, string>,
-    value as Record<string, unknown>
-  );
-}
-
 // Collects all descendant node IDs using the shared cycle-safe BFS algorithm.
-export function collectDescendantIds(
-  nodesMap: Y.Map<Y.Map<unknown>>,
+export function collectDescendantIds<T>(
+  nodesMap: Y.Map<T>,
   nodeId: string
 ): string[] {
-  const nodes: { id: string; parent: string | null }[] = [];
-  nodesMap.forEach((yNode: Y.Map<unknown>, key: string) => {
-    nodes.push({
-      id: key,
-      parent: (yNode.get('parent') as string | null) ?? null,
-    });
-  });
+  const nodes = nodeEntries(nodesMap).map(([id, yNode]) => ({
+    id,
+    parent: (yNode.get('parent') as string | null) ?? null,
+  }));
 
   return collectSubtreeIds(nodes, nodeId);
-}
-
-export function resolveCompoundMmpUpdates(
-  mapping: Record<string, string>,
-  value: Record<string, unknown>
-): MmpPropertyUpdate[] {
-  if (!value) return [];
-  const updates: MmpPropertyUpdate[] = [];
-  for (const [subKey, mmpProp] of Object.entries(mapping)) {
-    if (subKey in value) {
-      updates.push({ prop: mmpProp, val: value[subKey] });
-    }
-  }
-  return updates;
 }

@@ -24,8 +24,8 @@ class FakeTranslateLoader implements TranslateLoader {
 }
 
 class MmpServiceStub {
+  mapCreated$ = new BehaviorSubject<boolean>(true);
   exportMap = jest.fn();
-  nodeChildren = jest.fn().mockReturnValue([]);
   getSelectedNode = jest.fn();
   hasSelectedNode = jest.fn().mockReturnValue(true);
   selectNode = jest.fn();
@@ -35,10 +35,12 @@ class MmpServiceStub {
   addTree = jest.fn();
   removeNodeLink = jest.fn();
   toggleBranchVisibility = jest.fn();
+  childNodesHidden = jest.fn().mockReturnValue(false);
   distributeNodes = jest.fn();
   addNodeImage = jest.fn();
   importMap = jest.fn();
   protectingNode = jest.fn().mockReturnValue(null);
+  toggleBranchProtection = jest.fn();
 }
 
 interface TestContext {
@@ -48,7 +50,6 @@ interface TestContext {
   mapSyncService: {
     undo: jest.Mock;
     redo: jest.Mock;
-    toggleBranchProtection: jest.Mock;
     canUndo$: Observable<boolean>;
     canRedo$: Observable<boolean>;
   };
@@ -65,7 +66,6 @@ async function setupTestBed(): Promise<TestContext> {
   const mapSyncService = {
     undo: jest.fn(),
     redo: jest.fn(),
-    toggleBranchProtection: jest.fn(),
     canUndo$: canUndoSubject.asObservable(),
     canRedo$: canRedoSubject.asObservable(),
   };
@@ -175,21 +175,16 @@ describe('ToolbarComponent', () => {
     expect(alertSpy).toHaveBeenCalledWith('Large file warning');
   });
 
-  it('should detect hidden nodes', () => {
-    ctx.mmpService.nodeChildren.mockReturnValue([
-      { id: '1', hidden: true } as ExportNodeProperties,
-      { id: '2', hidden: false } as ExportNodeProperties,
-    ]);
+  it('reports hidden child nodes of the selected node', () => {
+    ctx.mmpService.childNodesHidden.mockReturnValue(true);
 
-    expect(ctx.component.hasHiddenNodes).toBe(true);
+    expect(ctx.component.childNodesHidden).toBe(true);
   });
 
-  it('should detect no hidden nodes', () => {
-    ctx.mmpService.nodeChildren.mockReturnValue([
-      { id: '1', hidden: false } as ExportNodeProperties,
-    ]);
+  it('reports no hidden child nodes when the view state shows them', () => {
+    ctx.mmpService.childNodesHidden.mockReturnValue(false);
 
-    expect(ctx.component.hasHiddenNodes).toBe(false);
+    expect(ctx.component.childNodesHidden).toBe(false);
   });
 
   it('should not allow hiding root node', () => {
@@ -438,8 +433,46 @@ describe('ToolbarComponent', () => {
     it('toggles the protection when clicked', () => {
       ctx.fixture.nativeElement.querySelector('#protect-branch-button').click();
 
-      expect(ctx.mapSyncService.toggleBranchProtection).toHaveBeenCalled();
+      expect(ctx.mmpService.toggleBranchProtection).toHaveBeenCalled();
     });
+  });
+
+  describe('before the map exists', () => {
+    const disabled = (selector: string): boolean | undefined =>
+      ctx.fixture.nativeElement.querySelector(selector)?.disabled;
+
+    it('disables import and export', () => {
+      ctx.mmpService.mapCreated$.next(false);
+      ctx.fixture.detectChanges();
+
+      expect({
+        importMenu: disabled('#menu-import'),
+        exportMenu: disabled('#menu-export'),
+      }).toEqual({ importMenu: true, exportMenu: true });
+    });
+
+    it('enables import and export once the map exists', () => {
+      expect({
+        importMenu: disabled('#menu-import'),
+        exportMenu: disabled('#menu-export'),
+      }).toEqual({ importMenu: false, exportMenu: false });
+    });
+  });
+
+  it('disables the edit buttons while editDisabled is true', () => {
+    ctx.fixture.componentRef.setInput('editDisabled', true);
+    ctx.fixture.detectChanges();
+
+    for (const selector of [
+      '#add-tree-button',
+      '#paste-node-button',
+      '#distribute-nodes-button',
+      '#copy-node-button',
+    ]) {
+      expect(ctx.fixture.nativeElement.querySelector(selector)?.disabled).toBe(
+        true
+      );
+    }
   });
 
   describe('add tree', () => {

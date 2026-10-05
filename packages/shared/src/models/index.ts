@@ -58,8 +58,6 @@ export interface UserNodeProperties {
   /** Protects this node and its descendants against local edits. */
   protected?: boolean;
   isRoot?: boolean;
-  hidden?: boolean;
-  hasHiddenChildNodes?: boolean;
 }
 
 export interface MapNode extends UserNodeProperties {
@@ -183,21 +181,10 @@ export type NodeProperty =
   | 'fontWeight'
   | 'fontStyle'
   | 'fontSize'
-  | 'nameColor'
-  | 'hidden';
+  | 'nameColor';
 
 export type NodePropertyValue =
   string | number | boolean | MapNodeCoordinates | null | undefined;
-
-export interface NodeUpdateEvent {
-  nodeProperties: ExportNodeProperties;
-  previousValue: unknown;
-  changedProperty: NodeProperty | string;
-}
-
-export interface MapCreateEvent {
-  previousMapData?: MapSnapshot;
-}
 
 export interface CachedMap {
   lastModified: number;
@@ -251,15 +238,11 @@ export interface OldMmpNode {
 }
 
 export interface MmpEventPayloadMap {
-  create: MapCreateEvent;
   nodeSelect: ExportNodeProperties;
   nodeDeselect: ExportNodeProperties;
-  nodeUpdate: NodeUpdateEvent;
-  nodeCreate: ExportNodeProperties;
-  nodePaste: ExportNodeProperties[];
-  nodeRemove: ExportNodeProperties;
-  distribute: void;
   nodeProtected: ExportNodeProperties;
+  /** The map data changed, by a local, a peer's or an undo write. */
+  mapChange: void;
 }
 
 export type MmpEventType = keyof MmpEventPayloadMap;

@@ -47,6 +47,9 @@ export class ToolbarComponent {
 
   public canUndo$ = this.mapSyncService.canUndo$;
   public canRedo$ = this.mapSyncService.canRedo$;
+  // Import and export need a map, read-only or not. The edit buttons get
+  // the same gate through `editDisabled`.
+  public mapCreated$ = this.mmpService.mapCreated$;
 
   constructor() {
     const flags = this.settingsService.getCachedSystemSettings()?.featureFlags;
@@ -62,10 +65,8 @@ export class ToolbarComponent {
       );
   }
 
-  get hasHiddenNodes() {
-    return (
-      this.mmpService.nodeChildren()?.filter(node => node.hidden).length > 0
-    );
+  get childNodesHidden() {
+    return this.mmpService.childNodesHidden();
   }
 
   /**
@@ -99,10 +100,6 @@ export class ToolbarComponent {
 
   public handleRedo(): void {
     this.mapSyncService.redo();
-  }
-
-  public toggleBranchProtection(): void {
-    this.mapSyncService.toggleBranchProtection();
   }
 
   public async share() {

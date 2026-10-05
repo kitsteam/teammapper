@@ -1,106 +1,56 @@
-import CopyPaste from './copy-paste.js';
-import Drag from './drag.js';
 import Draw from './draw.js';
-import Nodes from './nodes.js';
-import MmpMap from '../map.js';
-import Node, { NodeProperties } from '../models/node.js';
-import { DefaultNodeValues } from '../options.js';
-import { Event } from './events.js';
-import type {
-  ExportNodeProperties,
-  MapNodeCoordinates,
-} from '@teammapper/shared';
+import { emitted, nodeRecord, stubMap } from '../../test/stub-map.js';
+import type { ExportNodeProperties, MapSnapshot } from '@teammapper/shared';
 import type { D3DragEvent } from 'd3';
+import type MmpMap from '../map.js';
 
 /**
  * A protected branch refuses local edits and announces the refusal with
- * `nodeProtected`. Remote writes, which arrive with notifyWithEvent false,
- * still apply.
+ * `nodeProtected`. A peer's write straight to the map data still applies.
  */
 
-type DragEvent = D3DragEvent<SVGGElement, Node, unknown>;
+type DragEvent = D3DragEvent<SVGGElement, string, unknown>;
 
 interface DragInternals {
-  started(event: DragEvent, node: Node): void;
-  dragged(event: DragEvent, node: Node): void;
-  ended(event: DragEvent, node: Node): void;
-}
-
-/** A node with the DOM elements the update handlers write to. */
-function makeNode(properties: Partial<NodeProperties> & { id: string }): Node {
-  const node = new Node({
-    k: 1,
-    parent: null,
-    colors: { ...DefaultNodeValues.colors },
-    ...properties,
-  });
-  const svg = 'http://www.w3.org/2000/svg';
-  node.dom = document.createElementNS(svg, 'g');
-  const foreignObject = document.createElementNS(svg, 'foreignObject');
-  foreignObject.appendChild(document.createElement('div'));
-  node.dom.appendChild(foreignObject);
-  return node;
+  started(event: DragEvent, id: string): void;
+  dragged(event: DragEvent, id: string): void;
+  ended(event: DragEvent, id: string): void;
 }
 
 /** root -> a -> b, root -> c, with `a` protected. */
-function makeMap() {
-  const events = { call: jest.fn() };
-  const map = {
-    id: 'map',
-    rootId: 'root',
-    options: { defaultNode: DefaultNodeValues },
-    draw: {
-      update: jest.fn(),
-      clear: jest.fn(),
-      updateNodeShapes: jest.fn(),
-      updateProtectionIcon: jest.fn(),
-      drawBranch: jest.fn(() => null),
-    },
-    history: { save: jest.fn() },
-    events,
-  } as unknown as MmpMap;
-
-  const nodes = new Nodes(map);
-  map.nodes = nodes;
-  nodes.fixCoordinates = (coordinates: MapNodeCoordinates) => coordinates;
-  nodes.selectNode = jest.fn();
-  nodes.redrawSelectionRing = jest.fn();
-
-  const root = makeNode({ id: 'root', isRoot: true });
-  const a = makeNode({
+const SNAPSHOT: MapSnapshot = [
+  nodeRecord({ id: 'root', isRoot: true }),
+  nodeRecord({
     id: 'a',
-    parent: root,
+    parent: 'root',
     protected: true,
     coordinates: { x: 200, y: 0 },
-  });
-  const b = makeNode({ id: 'b', parent: a, coordinates: { x: 400, y: 0 } });
-  const c = makeNode({ id: 'c', parent: root, coordinates: { x: -200, y: 0 } });
-  const tree = { root, a, b, c };
-  Object.values(tree).forEach(node => nodes.setNode(node.id, node));
+  }),
+  nodeRecord({ id: 'b', parent: 'a', coordinates: { x: 400, y: 0 } }),
+  nodeRecord({ id: 'c', parent: 'root', coordinates: { x: -200, y: 0 } }),
+];
 
-  return { map, nodes, tree, events, clipboard: new CopyPaste(map) };
+function makeMap(snapshot: MapSnapshot = SNAPSHOT) {
+  const stub = stubMap(snapshot);
+  return { ...stub, clipboard: stub.map.copyPaste };
 }
 
-function calls(events: { call: jest.Mock }, event: Event): unknown[][] {
-  return events.call.mock.calls.filter(([name]) => name === event);
-}
-
-function refusals(events: { call: jest.Mock }): string[] {
-  return calls(events, Event.nodeProtected).map(
-    ([, , properties]) => (properties as ExportNodeProperties).id
+function refusals(emit: jest.Mock): string[] {
+  return emitted(emit, 'nodeProtected').map(
+    node => (node as ExportNodeProperties).id
   );
 }
 
-function drag(map: MmpMap, node: Node, dx: number, dy: number) {
-  const handler = new Drag(map) as unknown as DragInternals;
+function drag(map: MmpMap, id: string, dx: number, dy: number) {
+  const handler = map.drag as unknown as DragInternals;
   const event = { dx, dy } as DragEvent;
-  handler.started(event, node);
-  handler.dragged(event, node);
-  handler.ended(event, node);
+  handler.started(event, id);
+  handler.dragged(event, id);
+  handler.ended(event, id);
 }
 
 describe('protectingNode', () => {
-  it('returns the node carrying the flag for the node and its descendants', () => {
+  it('returns the node carrying the `protected` attribute for the node and its descendants', () => {
     const { nodes } = makeMap();
 
     expect(nodes.protectingNode('a')).toBe('a');
@@ -109,119 +59,118 @@ describe('protectingNode', () => {
   });
 
   it('stops at a parent cycle', () => {
-    const { nodes, tree } = makeMap();
-    tree.a.protected = false;
-    tree.a.parent = tree.b;
+    const { nodes } = makeMap([
+      nodeRecord({ id: 'root', isRoot: true }),
+      nodeRecord({ id: 'a', parent: 'b' }),
+      nodeRecord({ id: 'b', parent: 'a' }),
+    ]);
 
     expect(nodes.protectingNode('b')).toBeNull();
   });
 });
 
 describe('protectBranch', () => {
-  it('moves the flag of a protected child to the protected parent', () => {
-    const { nodes, tree } = makeMap();
+  it('moves the `protected` attribute of a protected child to the protected parent', () => {
+    const { nodes, data } = makeMap();
 
     nodes.protectBranch('root');
 
-    expect(tree.root.protected).toBe(true);
-    expect(tree.a.protected).toBe(false);
+    expect(data.node('root')?.protected).toBe(true);
+    expect(data.node('a')?.protected).toBe(false);
     expect(nodes.protectingNode('b')).toBe('root');
   });
 
-  it('announces every flag it writes', () => {
-    const { nodes, events } = makeMap();
+  it('writes every protected attribute in one change', () => {
+    const { nodes, data } = makeMap();
+    const listener = jest.fn();
+    data.subscribe(listener);
 
     nodes.protectBranch('root');
 
-    const changed = calls(events, Event.nodeUpdate).map(
-      ([, , update]) =>
-        (update as { nodeProperties: ExportNodeProperties }).nodeProperties.id
-    );
-    expect(changed).toEqual(['a', 'root']);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener.mock.calls[0][0].updated.sort()).toEqual(['a', 'root']);
   });
 
   it('does nothing for a node already protected by an ancestor', () => {
-    const { nodes, tree } = makeMap();
+    const { nodes, data } = makeMap();
 
     nodes.protectBranch('b');
 
-    expect(tree.b.protected).toBe(false);
-    expect(tree.a.protected).toBe(true);
+    expect(data.node('b')?.protected).toBe(false);
+    expect(data.node('a')?.protected).toBe(true);
   });
 });
 
 describe('releaseBranch', () => {
   it('releases the whole branch from a descendant', () => {
-    const { nodes, tree } = makeMap();
+    const { nodes, data } = makeMap();
 
     nodes.releaseBranch('b');
 
-    expect(tree.a.protected).toBe(false);
+    expect(data.node('a')?.protected).toBe(false);
     expect(nodes.protectingNode('b')).toBeNull();
   });
 });
 
-describe('local edits inside a protected branch', () => {
+describe('edits inside a protected branch', () => {
   it('refuses a rename and leaves the name unchanged', () => {
-    const { nodes, tree, events } = makeMap();
+    const { nodes, data, events } = makeMap();
 
-    nodes.updateNode('name', 'new', true, true, 'b');
+    nodes.updateNode('name', 'new', 'b');
 
-    expect(tree.b.name).toBe('');
-    expect(refusals(events)).toEqual(['b']);
+    expect(data.node('b')?.name).toBe('');
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 
   it('refuses a style change', () => {
-    const { nodes, tree } = makeMap();
+    const { nodes, data } = makeMap();
 
-    nodes.updateNode('fontWeight', 'bold', true, true, 'a');
+    nodes.updateNode('fontWeight', 'bold', 'a');
 
-    expect(tree.a.font.weight).toBe('normal');
+    expect(data.node('a')?.font?.weight).toBe('normal');
   });
 
-  it('allows hiding and showing', () => {
-    const { nodes, tree, events } = makeMap();
+  it('lets toggleBranchVisibility hide the child nodes of a protected node', () => {
+    const { map, nodes, events } = makeMap();
+    nodes.selectNode('a');
+    events.emit.mockClear();
 
-    nodes.updateNode('hidden', true, true, true, 'b');
+    nodes.toggleBranchVisibility();
 
-    expect(tree.b.hidden).toBe(true);
-    expect(refusals(events)).toEqual([]);
+    expect(map.viewState.hidesChildren('a')).toBe(true);
+    expect(refusals(events.emit)).toEqual([]);
   });
 
   it('refuses removing an ancestor of a protected node', () => {
-    const { nodes, tree, events } = makeMap();
-    const d = makeNode({ id: 'd', parent: tree.root });
-    nodes.setNode(d.id, d);
-    tree.a.parent = d;
+    const { nodes, events } = makeMap([
+      ...SNAPSHOT.filter(node => node.id !== 'a'),
+      nodeRecord({ id: 'd', parent: 'root' }),
+      nodeRecord({ id: 'a', parent: 'd', protected: true }),
+    ]);
 
     nodes.removeNode('d');
 
     expect(nodes.existNode('d')).toBe(true);
     expect(nodes.existNode('a')).toBe(true);
-    expect(refusals(events)).toEqual(['d']);
+    expect(refusals(events.emit)).toEqual(['d']);
   });
 
   it('refuses adding a child', () => {
-    const { nodes, events } = makeMap();
+    const { nodes, data, events } = makeMap();
 
-    const added = nodes.addNodeUnlessProtected({}, true, true, 'b');
+    const added = nodes.addNode({}, 'b');
 
     expect(added).toBeNull();
-    expect(nodes.getNodes()).toHaveLength(4);
-    expect(refusals(events)).toEqual(['b']);
+    expect(data.nodes()).toHaveLength(4);
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 
   it('adds a child to an unprotected node', () => {
     const { nodes } = makeMap();
 
-    const added = nodes.addNodeUnlessProtected(
-      { coordinates: { x: -400, y: 0 } },
-      true,
-      true,
-      'c'
-    );
+    const added = nodes.addNode({ coordinates: { x: -400, y: 0 } }, 'c');
 
-    expect(added?.parent?.id).toBe('c');
+    expect(added?.parent).toBe('c');
   });
 
   it('refuses a cut and keeps the clipboard empty', () => {
@@ -229,120 +178,85 @@ describe('local edits inside a protected branch', () => {
 
     expect(clipboard.cut('b')).toBe(false);
     expect(nodes.existNode('b')).toBe(true);
-    expect(refusals(events)).toEqual(['b']);
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 
   it('refuses pasting onto a protected node', () => {
-    const { nodes, clipboard, events } = makeMap();
+    const { data, clipboard, events } = makeMap();
     clipboard.copy('c');
 
     clipboard.paste('b');
 
-    expect(nodes.getNodes()).toHaveLength(4);
-    expect(refusals(events)).toEqual(['b']);
+    expect(data.nodes()).toHaveLength(4);
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 
   it('refuses editing the name', () => {
-    const { map, tree, events } = makeMap();
+    const { map, events } = makeMap();
+    // The map was never drawn, so an editor that opened would throw.
     const draw = new Draw(map, document.createElement('div'));
 
-    draw.enableNodeNameEditing(tree.b);
+    draw.enableNodeNameEditing('b');
 
-    expect(tree.b.getNameDOM().getAttribute('contenteditable')).toBeNull();
-    expect(refusals(events)).toEqual(['b']);
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 });
 
 describe('changes that stay allowed', () => {
-  it('applies a remote rename inside a protected branch', () => {
-    const { nodes, tree, events } = makeMap();
+  it('applies a peer rename inside a protected branch', () => {
+    const { data, events } = makeMap();
 
-    nodes.updateNode('name', 'remote', false, false, 'b');
+    data.updateNode('b', 'name', 'peer');
 
-    expect(tree.b.name).toBe('remote');
-    expect(refusals(events)).toEqual([]);
+    expect(data.node('b')?.name).toBe('peer');
+    expect(refusals(events.emit)).toEqual([]);
   });
 
-  it('applies a remote removal of a protected node', () => {
-    const { nodes } = makeMap();
+  it('applies a peer removal of a protected node', () => {
+    const { nodes, data } = makeMap();
 
-    nodes.removeNode('a', false);
+    data.removeNode('a');
 
     expect(nodes.existNode('a')).toBe(false);
     expect(nodes.existNode('b')).toBe(false);
   });
 
   it('pastes a copy of a protected branch unprotected', () => {
-    const { nodes, clipboard, events } = makeMap();
+    const { data, clipboard } = makeMap();
+    const listener = jest.fn();
+    data.subscribe(listener);
     clipboard.copy('a');
 
     clipboard.paste('c');
 
-    const pasted = (calls(events, Event.nodePaste)[0][2] ??
-      []) as ExportNodeProperties[];
-    expect(pasted).toHaveLength(2);
-    expect(pasted.every(node => node.protected === false)).toBe(true);
-    expect(nodes.getNodes()).toHaveLength(6);
+    const added: string[] = listener.mock.calls[0][0].added;
+    expect(added).toHaveLength(2);
+    expect(added.every(id => data.node(id)?.protected === false)).toBe(true);
+    expect(data.nodes()).toHaveLength(6);
   });
 });
 
 describe('drag', () => {
   it('leaves a protected node at its position', () => {
-    const { map, tree, events } = makeMap();
+    const { map, data, events } = makeMap();
+    const listener = jest.fn();
+    data.subscribe(listener);
 
-    drag(map, tree.b, 50, 50);
+    drag(map, 'b', 50, 50);
 
-    expect(tree.b.coordinates).toEqual({ x: 400, y: 0 });
-    expect(calls(events, Event.nodeUpdate)).toHaveLength(0);
-    expect(refusals(events)).toEqual(['b']);
+    expect(data.node('b')?.coordinates).toEqual({ x: 400, y: 0 });
+    expect(listener).not.toHaveBeenCalled();
+    expect(refusals(events.emit)).toEqual(['b']);
   });
 
   it('moves a protected child along with its unprotected parent', () => {
-    const { map, nodes, tree } = makeMap();
+    const { map, nodes, data } = makeMap();
     nodes.releaseBranch('a');
-    tree.b.protected = true;
+    data.updateNode('b', 'protected', true);
 
-    drag(map, tree.a, 50, 10);
+    drag(map, 'a', 50, 10);
 
-    expect(tree.a.coordinates).toEqual({ x: 250, y: 10 });
-    expect(tree.b.coordinates).toEqual({ x: 450, y: 10 });
-  });
-});
-
-describe('lock badge', () => {
-  it('draws a badge on the node carrying the flag only', () => {
-    const { map, tree } = makeMap();
-    const draw = new Draw(map, document.createElement('div'));
-
-    draw.updateProtectionIcon(tree.a);
-    draw.updateProtectionIcon(tree.b);
-
-    expect(tree.a.getProtectionIconDOM()?.textContent).toBe('lock');
-    expect(tree.b.getProtectionIconDOM()).toBeNull();
-  });
-
-  it('moves and recolors the badge when the node changes', () => {
-    const { map, tree } = makeMap();
-    const draw = new Draw(map, document.createElement('div'));
-    draw.updateProtectionIcon(tree.a);
-
-    tree.a.dimensions = { width: 200, height: 40 };
-    tree.a.colors.name = '#ff0000';
-    draw.updateProtectionIcon(tree.a);
-
-    const icon = tree.a.getProtectionIconDOM();
-    expect(icon?.getAttribute('x')).toBe('100');
-    expect(icon?.style.getPropertyValue('fill')).toBe('#ff0000');
-  });
-
-  it('removes the badge once the protection is released', () => {
-    const { map, tree } = makeMap();
-    const draw = new Draw(map, document.createElement('div'));
-    draw.updateProtectionIcon(tree.a);
-
-    tree.a.protected = false;
-    draw.updateProtectionIcon(tree.a);
-
-    expect(tree.a.getProtectionIconDOM()).toBeNull();
+    expect(data.node('a')?.coordinates).toEqual({ x: 250, y: 10 });
+    expect(data.node('b')?.coordinates).toEqual({ x: 450, y: 10 });
   });
 });

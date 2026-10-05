@@ -20,6 +20,7 @@ say so.
 | fold, collapse, unfold, expand          | hide, show                                 |
 | clone, fork                             | duplicate                                  |
 | version, revision, snapshot             | (none of these exist; see **Undo / Redo**) |
+| flag, mark (for a stored value)         | attribute                                  |
 
 ### Reserved
 
@@ -57,8 +58,8 @@ branch to it. A map holds at least one root node, the main root.
 ### Main root
 
 The one root node per map that the app creates with the map. No one can delete,
-copy or cut it. The stored flag `isRoot` marks the main root only, so do
-not read `isRoot` to learn whether a node has a parent.
+copy or cut it. The stored attribute `isRoot` is true for the main root only,
+so do not read `isRoot` to learn whether a node has a parent.
 
 ### Orphaned node
 
@@ -104,12 +105,12 @@ insert the symbol as a node image. Not available on every server.
 
 ### Protected branch
 
-A node and every node below it, which a user marks as finished to tell others
-not to change them. The app stores the flag `protected` on the top node of the
-branch only and draws a lock badge on that node. A node counts as protected
-when it or an ancestor carries the flag. Any writable client protects a branch
-or releases it again from the toolbar's lock button, and the flag syncs to
-every client.
+A node and every node below it, which a user declares finished to tell others
+not to change them. The app sets the attribute `protected` on the top node of
+the branch only and draws a lock badge on that node. A node counts as protected
+when its own `protected` attribute or an ancestor's is true. Any writable
+client protects a branch or releases it again from the toolbar's lock button,
+and the attribute syncs to every client.
 
 A protected branch refuses local edits: rename, style, image, link, drag, add
 child, paste, remove and cut. Peer writes, undo, redo, redistribute and import
@@ -121,10 +122,26 @@ Write "protect" and "release". Avoid "lock" for the concept, and "freeze" or
 
 ### Hidden node
 
-A node the app does not draw because an ancestor's children are hidden. The map
-does not store hiding: hiding is how one person is looking at the map right now.
+A node the app does not draw because the view state hides the child nodes of
+one of its ancestors. The app also hides a node a peer adds below such an
+ancestor. A hidden node keeps its room in the layout.
 
 Write "hide" and "show". Avoid "collapse" and "fold".
+
+### View state
+
+The set of nodes whose child nodes one person has hidden. mmp keeps the view
+state apart from the map data, so the undo stack never records it. The
+frontend sends no record of which child nodes are hidden to the server or to a
+peer, and stores none, so a reload shows them again. The view state starts
+empty each time the app opens a map.
+
+### Selection, ring
+
+The **selection** is the one node a client has selected. mmp draws a **ring**
+around it, and around each node a peer has selected, in that peer's client
+color. Each client keeps its own selection apart from the map data and from
+the view state. Peers see it through Yjs awareness (see **Presence**).
 
 ### Map settings
 
@@ -146,6 +163,16 @@ map's deletion date and the server's retention period, and gives the map's
 admin the delete action. The map list, which the settings' third tab and the
 start page both show, offers the same delete action for every listed map whose
 admin id the browser holds, open or not.
+
+### Node mark
+
+One visual element of a drawn node: its background, name, image, link, hidden
+eye icon or lock badge. The renderer in `packages/mmp` draws every node from
+the marks in `NODE_MARKS`, so a new visual element is a new mark. The term
+follows the visualization sense of a mark: a visual element bound to one data
+item. A mark can consist of several DOM elements, such as the link's `<a>` and
+`<text>`. Write "DOM element" or the tag name when you mean the browser object,
+and "node group" for the `<g>` that holds all marks of one node.
 
 ## What you can do to a map
 
@@ -231,8 +258,8 @@ or "fork".
 
 ### Writable
 
-Whether a connection may edit. The app stores one flag; read-only is its
-negation. A connection is writable when it presents the map's modification
+Whether a connection may edit. The app stores one boolean attribute, and
+read-only is its negation. A connection is writable when it presents the map's modification
 secret.
 
 ### Viewer link, editor link
@@ -276,3 +303,32 @@ edits.
 
 Whether this client reaches the server. Losing the connection raises the
 "Connection lost" dialog with a reconnect button.
+
+## Words for code
+
+### Attribute
+
+A value a data object holds, such as a node's `isRoot`, `protected` or
+`name`. A boolean attribute is still an attribute: write "the `isRoot`
+attribute is true", not "the node carries the root flag".
+
+### Flag
+
+A switch that configures the app from outside its data: an environment
+variable, a feature flag or a command-line option. A value stored on a node or
+a map is an attribute.
+
+### Map data
+
+The nodes of one mind map as every client shares them. The app draws the map
+from the map data and keeps no copy of its own, so your edits, a peer's edits
+and an undo all change the map data first, and the app then redraws.
+
+In the app, the map data syncs with the server and the other clients. Tests,
+and a host without sync, use `InMemoryMapData`. The **view state** and the
+**selection** stay with one person and never enter the map data.
+
+### Mark
+
+Reserved for the **node mark**, one visual element of a drawn node. Do not use
+"mark" for a stored value: a node holds an attribute, it does not carry a mark.

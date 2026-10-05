@@ -1,4 +1,9 @@
-import { NodeColors, NodeFont, NodeImage, NodeLink } from './models/node.js';
+import type {
+  NodeColors,
+  NodeFont,
+  NodeImage,
+  NodeLink,
+} from './data/node-record.js';
 import type {
   ImageReference,
   MapNodeCoordinates,
@@ -90,8 +95,8 @@ export default class Options implements OptionParameters {
 
     this.drag = flag;
 
-    this.map.draw.clear();
-    this.map.draw.update();
+    // The drag behavior attaches when a node's DOM is created.
+    this.map.draw.drawAll();
     this.map.nodes.redrawSelectionRing();
   }
 
@@ -106,8 +111,7 @@ export default class Options implements OptionParameters {
 
     this.edit = flag;
 
-    this.map.draw.clear();
-    this.map.draw.update();
+    this.map.draw.drawAll();
     this.map.nodes.redrawSelectionRing();
   }
 }
@@ -136,7 +140,6 @@ export const DefaultNodeValues: DefaultNodeProperties = {
     style: 'normal',
     weight: 'normal',
   },
-  hidden: false,
   isRoot: false,
 };
 
@@ -165,7 +168,6 @@ export const DefaultRootNodeValues: DefaultNodeProperties = {
     weight: 'normal',
   },
   isRoot: true,
-  hidden: false,
 };
 
 export interface DefaultNodeProperties {
@@ -176,7 +178,6 @@ export interface DefaultNodeProperties {
   colors: NodeColors;
   font: NodeFont;
   isRoot: boolean;
-  hidden: boolean;
 }
 
 /**

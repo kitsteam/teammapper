@@ -8,33 +8,8 @@ import {
   toTransmittableSecret,
   resolveClientColor,
   findAffectedNodes,
-  resolveMmpPropertyUpdate,
-  resolveCompoundMmpUpdates,
   collectDescendantIds,
 } from './yjs-utils';
-
-// Mock the NodePropertyMapping module
-jest.mock('@teammapper/mmp', () => ({
-  NodePropertyMapping: {
-    name: ['name'],
-    protected: ['protected'],
-    coordinates: ['coordinates'],
-    imageSrc: ['image', 'src'],
-    imageSize: ['image', 'size'],
-    linkHref: ['link', 'href'],
-    backgroundColor: ['colors', 'background'],
-    branchColor: ['colors', 'branch'],
-    fontWeight: ['font', 'weight'],
-    fontStyle: ['font', 'style'],
-    fontSize: ['font', 'size'],
-    nameColor: ['colors', 'name'],
-    hidden: ['hidden'],
-  },
-}));
-
-// Import NodePropertyMapping after mocking - needed for reverse mapping
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { NodePropertyMapping } from '@teammapper/mmp';
 
 function createMockNode(
   overrides?: Partial<ExportNodeProperties>
@@ -47,7 +22,6 @@ function createMockNode(
     colors: { branch: '#000000' },
     font: { size: 14, style: 'normal', weight: 'normal' },
     protected: false,
-    hidden: false,
     coordinates: undefined,
     image: undefined,
     link: undefined,
@@ -113,37 +87,34 @@ describe('Y.Doc conversion utilities', () => {
     );
   });
 
-  it('applies defaults for missing optional properties', () => {
-    const input: ExportNodeProperties = {
-      id: 'n2',
-      parent: undefined,
-      k: undefined,
-      name: undefined,
-      isRoot: undefined,
-      protected: undefined,
-      coordinates: undefined,
-      colors: undefined,
-      font: undefined,
-      image: undefined,
-      link: undefined,
-    } as unknown as ExportNodeProperties;
-
+  it('reads back a key the Y.Map lacks as absent', () => {
     const yNode = new Y.Map<unknown>();
-    populateYMapFromNodeProps(yNode, input);
+    nodesMap.set('n2', yNode);
+    yNode.set('id', 'n2');
+    yNode.set('parent', 'root');
+
+    expect(yMapToNodeProps(yNode)).toStrictEqual({ id: 'n2', parent: 'root' });
+  });
+
+  it('writes no key for an attribute that is undefined', () => {
+    const yNode = new Y.Map<unknown>();
+    populateYMapFromNodeProps(yNode, createMockNode({ id: 'n2' }));
     nodesMap.set('n2', yNode);
 
-    const result = yMapToNodeProps(nodesMap.get('n2')!);
-
-    expect(result).toEqual(
-      expect.objectContaining({
-        parent: null,
-        k: 1,
-        name: '',
-        isRoot: false,
-        protected: false,
-        coordinates: { x: 0, y: 0 },
-      })
+    expect(['coordinates', 'image', 'link'].map(key => yNode.has(key))).toEqual(
+      [false, false, false]
     );
+  });
+
+  it.each([
+    ['null', null],
+    ['an empty string', ''],
+  ])('stores null as the parent of a root given %s', (_label, parent) => {
+    const yNode = new Y.Map<unknown>();
+    populateYMapFromNodeProps(yNode, createMockNode({ id: 'r', parent }));
+    nodesMap.set('r', yNode);
+
+    expect(yNode.get('parent')).toBeNull();
   });
 
   it('writes no detached entry', () => {
@@ -252,63 +223,6 @@ describe('toTransmittableSecret', () => {
     ['an emoji', 'ab🙂'],
   ])('returns an empty string for %s', (_label, secret) => {
     expect(toTransmittableSecret(secret)).toBe('');
-  });
-});
-
-// ─── Y.Doc property application to MMP ───────────────────────
-
-describe('Y.Doc property application to MMP', () => {
-  it('resolves simple property (name) via reverse mapping', () => {
-    const updates = resolveMmpPropertyUpdate('name', 'New Name');
-    expect(updates).toEqual([{ prop: 'name', val: 'New Name' }]);
-  });
-
-  it('resolves simple property (protected) via reverse mapping', () => {
-    const updates = resolveMmpPropertyUpdate('protected', true);
-    expect(updates).toEqual([{ prop: 'protected', val: true }]);
-  });
-
-  it('resolves compound property (colors) via reverse mapping', () => {
-    const updates = resolveMmpPropertyUpdate('colors', {
-      background: '#ff0000',
-      branch: '#00ff00',
-      name: '#0000ff',
-    });
-
-    expect(updates).toEqual([
-      { prop: 'backgroundColor', val: '#ff0000' },
-      { prop: 'branchColor', val: '#00ff00' },
-      { prop: 'nameColor', val: '#0000ff' },
-    ]);
-  });
-
-  it('resolves compound property (font) via reverse mapping', () => {
-    const updates = resolveMmpPropertyUpdate('font', {
-      size: 20,
-      weight: 'bold',
-      style: 'italic',
-    });
-
-    expect(updates).toEqual(
-      expect.arrayContaining([
-        { prop: 'fontSize', val: 20 },
-        { prop: 'fontWeight', val: 'bold' },
-        { prop: 'fontStyle', val: 'italic' },
-      ])
-    );
-  });
-
-  it('returns empty array for unknown property keys', () => {
-    const updates = resolveMmpPropertyUpdate('unknown_key', 'value');
-    expect(updates).toEqual([]);
-  });
-
-  it('handles null compound value gracefully', () => {
-    const updates = resolveCompoundMmpUpdates(
-      { background: 'backgroundColor' },
-      null as unknown as Record<string, unknown>
-    );
-    expect(updates).toEqual([]);
   });
 });
 
