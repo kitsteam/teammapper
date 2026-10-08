@@ -23,9 +23,9 @@ export function fakeDraw(
   const preview = new Map<string, MapNodeCoordinates>();
 
   return {
-    drawAll: jest.fn(() => rings.clear()),
-    redrawAll: jest.fn(),
+    drawAll: jest.fn(),
     drawNodes: jest.fn(),
+    drawSubtree: jest.fn(),
     removeNodes: jest.fn((): string[] => []),
     renderPositions: jest.fn(),
     enableNodeNameEditing: jest.fn(),

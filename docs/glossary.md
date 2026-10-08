@@ -254,6 +254,18 @@ Write the map out. Six formats: JSON, Mermaid, SVG, PNG, JPEG and PDF.
 Copy a whole map to a new one with a new address and new secrets. Never "clone"
 or "fork".
 
+### Image cap
+
+The maximum stored image bytes one map may hold through image uploads or
+duplication. Existing inline images and the image extraction job can exceed it.
+
+### Duplication storage budget
+
+The maximum stored image bytes across all maps under which duplication may
+add image bytes. Counts image references' stored image sizes and inline image
+data URLs' UTF-8 bytes. Copies of copies consume the same budget. Distinct from
+the image cap, which limits the images of a single map.
+
 ## Sharing and collaboration
 
 ### Writable
@@ -312,6 +324,15 @@ A value a data object holds, such as a node's `isRoot`, `protected` or
 `name`. A boolean attribute is still an attribute: write "the `isRoot`
 attribute is true", not "the node carries the root flag".
 
+### Attribute group
+
+A set of related node attributes that a node record holds under one key:
+`colors`, `font`, `image` and `link`. The Y.Doc stores each attribute group
+as a nested Y.Map with one key per attribute. When you change the background
+color while a peer changes the name color, your clients write different keys
+and both colors survive the merge. The frontend and the backend also read a
+group that a peer stored as a plain object.
+
 ### Flag
 
 A switch that configures the app from outside its data: an environment
@@ -324,8 +345,8 @@ The nodes of one mind map as every client shares them. The app draws the map
 from the map data and keeps no copy of its own, so your edits, a peer's edits
 and an undo all change the map data first, and the app then redraws.
 
-In the app, the map data syncs with the server and the other clients. Tests,
-and a host without sync, use `InMemoryMapData`. The **view state** and the
+In the app, the map data syncs with the server and the other clients. The
+mmp specs use `InMemoryMapData`. The **view state** and the
 **selection** stay with one person and never enter the map data.
 
 ### Mark

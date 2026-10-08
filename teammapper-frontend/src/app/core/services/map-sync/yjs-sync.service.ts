@@ -1,8 +1,14 @@
-import { auditTime, Subscription } from 'rxjs';
+import {
+  asyncScheduler,
+  auditTime,
+  Subject,
+  Subscription,
+  throttleTime,
+} from 'rxjs';
 import {
   CachedMapOptions,
-  DEFAULT_FONT_MAX_SIZE,
   ExportNodeProperties,
+  WS_CLOSE_MAP_SYNC_RESET,
 } from '@teammapper/shared';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
@@ -29,7 +35,6 @@ import {
   LOCAL_ORIGIN,
   META,
   YjsMapData,
-  replacesMainRoot,
 } from './yjs-map-data';
 
 const WS_CLOSE_MAP_DELETED = 4001;
@@ -40,6 +45,14 @@ const stringOr = (value: unknown, fallback: string): string =>
 
 /** The longest the cached map lags behind a change of the map data. */
 export const ATTACHED_MAP_AUDIT_MS = 250;
+
+/**
+ * The shortest interval between two selection updates this client sends to
+ * its peers. Holding an arrow key changes the selection about 30 times a
+ * second. At 200 ms the client sends at most 50 updates per 10 s rate window
+ * of the backend, half the backend's default per-connection limit.
+ */
+export const PRESENCE_THROTTLE_MS = 200;
 
 /**
  * Keeps one open map in sync with the other clients over a Yjs websocket.
@@ -56,7 +69,6 @@ export class YjsSyncService {
   private yjsWritable = false;
   private yjsSubscriptions: Subscription[] = [];
   private yjsMapId: string | null = null;
-  private yjsNodesObserver: Parameters<NodesMap['observe']>[0] | null = null;
   private yjsOptionsObserver: Parameters<Y.Map<unknown>['observe']>[0] | null =
     null;
   private yjsAwarenessHandler: (() => void) | null = null;
@@ -64,6 +76,8 @@ export class YjsSyncService {
   // The node this client has selected, which setupAwareness publishes once
   // awareness is up.
   private selectedNodeId: string | null = null;
+  private readonly selectionChanges = new Subject<void>();
+  private mapAttached = false;
 
   constructor(
     private ctx: MapSyncContext,
@@ -71,7 +85,19 @@ export class YjsSyncService {
     private settingsService: SettingsService,
     private utilsService: UtilsService,
     private toastrService: ToastrService
-  ) {}
+  ) {
+    // The throttle sends the first change at once. For further changes within
+    // the interval, the throttle sends one update with the selection at the
+    // end of the interval.
+    this.selectionChanges
+      .pipe(
+        throttleTime(PRESENCE_THROTTLE_MS, asyncScheduler, {
+          leading: true,
+          trailing: true,
+        })
+      )
+      .subscribe(() => this.publishSelection());
+  }
 
   /**
    * The Y.Doc of the open connection. initMap creates it, and the reads and
@@ -147,6 +173,12 @@ export class YjsSyncService {
       return;
     }
 
+    if (this.yDoc) {
+      const writable = this.yjsWritable;
+      this.destroy();
+      this.yjsWritable = writable;
+    }
+
     this.yjsMapId = uuid;
     this.yDoc = new Y.Doc();
     // Define `meta` as a map before the first sync. A peer's write would
@@ -156,7 +188,7 @@ export class YjsSyncService {
     this.yjsMapData = new YjsMapData(this.yDoc, () => this.yUndoManager);
     const provider = this.setupConnection(uuid);
     this.setupConnectionStatus(provider);
-    this.setupMapDeletionHandler(provider);
+    this.setupMapCloseHandler(provider);
   }
 
   /**
@@ -167,12 +199,23 @@ export class YjsSyncService {
   attachMap(): void {
     this.detachObservers();
     this.createListeners();
+    this.applyMapOptions();
     this.attachSelection();
     this.setupNodesObserver();
     this.setupMapOptionsObserver();
     if (!this.yUndoManager) this.initUndoManager();
+    // The new renderer has no peer rings yet, even when awareness is unchanged.
+    this.ctx.setColorMapping({});
     this.setupAwareness();
     this.settingsService.setEditMode(this.yjsWritable);
+  }
+
+  /** Keep syncing map settings while the settings page replaces the renderer. */
+  detachMap(): void {
+    this.mapAttached = false;
+    this.unsubscribeListeners();
+    this.updateAwarenessSelection(null);
+    this.ctx.setAttachedNode(null);
   }
 
   private hasActiveConnection(mapId: string): boolean {
@@ -262,10 +305,18 @@ export class YjsSyncService {
     );
   }
 
-  private setupMapDeletionHandler(provider: WebsocketProvider): void {
+  private setupMapCloseHandler(provider: WebsocketProvider): void {
     provider.on('connection-close', (event: CloseEvent | null) => {
       if (!this.isCurrentProvider(provider)) return;
-      if (event?.code === WS_CLOSE_MAP_DELETED) {
+      if (event?.code === WS_CLOSE_MAP_SYNC_RESET && this.yjsMapId) {
+        const mapId = this.yjsMapId;
+        const writable = this.yjsWritable;
+        this.settingsService.setEditMode(false);
+        this.destroy();
+        this.setWritable(writable);
+        this.initMap(mapId);
+        this.ctx.setConnectionStatus('disconnected');
+      } else if (event?.code === WS_CLOSE_MAP_DELETED) {
         this.ctx.mapDeleted();
         window.location.reload();
       }
@@ -280,6 +331,7 @@ export class YjsSyncService {
    * left stay editable.
    */
   destroy(): void {
+    this.mapAttached = false;
     this.unsubscribeListeners();
     this.detachObservers();
     this.destroyUndoManager();
@@ -315,10 +367,7 @@ export class YjsSyncService {
   }
 
   private detachObservers(): void {
-    if (this.yDoc && this.yjsNodesObserver) {
-      this.nodesMap.unobserve(this.yjsNodesObserver);
-      this.yjsNodesObserver = null;
-    }
+    if (this.yjsMapData) this.yjsMapData.onPeerReplacement = null;
     if (this.yDoc && this.yjsOptionsObserver) {
       const optionsMap = this.yDoc.getMap('mapOptions');
       optionsMap.unobserve(this.yjsOptionsObserver);
@@ -338,6 +387,7 @@ export class YjsSyncService {
   // ─── mmp event listeners ────────────────────────────────────
 
   private createListeners(): void {
+    this.mapAttached = true;
     this.unsubscribeListeners();
     this.setupMapChangeHandler();
     this.setupSelectionHandlers();
@@ -417,20 +467,27 @@ export class YjsSyncService {
     const optionsMap = this.doc.getMap('mapOptions');
     this.yjsOptionsObserver = (_: unknown, transaction: Y.Transaction) => {
       if (transaction.local && transaction.origin !== this.yUndoManager) return;
-      this.applyRemoteMapOptions();
+      this.applyMapOptions();
     };
     optionsMap.observe(this.yjsOptionsObserver);
   }
 
-  private applyRemoteMapOptions(): void {
+  /**
+   * Hand the map settings the doc holds to MmpService. `read` drops a value
+   * that is no number, and MmpService fills each missing setting with the
+   * configured default.
+   */
+  private applyMapOptions(): void {
     const optionsMap = this.doc.getMap('mapOptions');
-    const options: CachedMapOptions = {
-      fontMaxSize:
-        (optionsMap.get('fontMaxSize') as number) ?? DEFAULT_FONT_MAX_SIZE,
-      fontMinSize: (optionsMap.get('fontMinSize') as number) ?? 6,
-      fontIncrement: (optionsMap.get('fontIncrement') as number) ?? 2,
+    const read = (key: keyof CachedMapOptions): number | undefined => {
+      const value = optionsMap.get(key);
+      return typeof value === 'number' ? value : undefined;
     };
-    this.mmpService.updateAdditionalMapOptions(options);
+    this.mmpService.updateAdditionalMapOptions({
+      fontMaxSize: read('fontMaxSize'),
+      fontMinSize: read('fontMinSize'),
+      fontIncrement: read('fontIncrement'),
+    });
   }
 
   // ─── A peer's map replacement ───────────────────────────────
@@ -442,17 +499,16 @@ export class YjsSyncService {
    * neither: ImportService shows its own toast for a local import.
    */
   private setupNodesObserver(): void {
-    const nodesMap = this.nodesMap;
-    this.yjsNodesObserver = (event, transaction) => {
-      if (transaction.local) return;
-      if (!replacesMainRoot(event.changes.keys, nodesMap)) return;
-      // A peer replaced the whole map, so our history describes a map that no
-      // longer exists. A replacement is a delete-and-reinsert that no CRDT can
-      // merge back, so undoing into it would leave the map with two roots.
-      this.yUndoManager?.clear();
-      if (this.announcesImport(transaction)) void this.showImportToast();
-    };
-    nodesMap.observe(this.yjsNodesObserver);
+    this.mapData.onPeerReplacement = transaction =>
+      this.handlePeerReplacement(transaction);
+  }
+
+  private handlePeerReplacement(transaction: Y.Transaction): void {
+    // A peer replaced the whole map, so our history describes a map that no
+    // longer exists. A replacement is a delete-and-reinsert that no CRDT can
+    // merge back, so undoing into it would leave the map with two roots.
+    this.yUndoManager?.clear();
+    if (this.announcesImport(transaction)) void this.showImportToast();
   }
 
   /**
@@ -501,21 +557,27 @@ export class YjsSyncService {
 
   private pickClientColor(awareness: WebsocketProvider['awareness']): string {
     const usedColors = new Set<string>();
-    for (const [, state] of awareness.getStates()) {
+    for (const [clientId, state] of awareness.getStates()) {
+      if (clientId === this.doc.clientID) continue;
       if (state?.user?.color) usedColors.add(state.user.color);
     }
     return resolveClientColor(this.ctx.getClientColor(), usedColors);
   }
 
+  /** Records the selection and schedules a throttled update to peers. */
   private updateAwarenessSelection(nodeId: string | null): void {
     this.selectedNodeId = nodeId;
-    // Until setupAwareness runs, the method only records the selection, and
-    // setupAwareness publishes it. A write before then would make
+    this.selectionChanges.next();
+  }
+
+  private publishSelection(): void {
+    // Until setupAwareness runs, publishSelection sends nothing, and
+    // setupAwareness publishes the recorded selection. A write before then would make
     // pickClientColor count this client's own colour as taken.
     if (!this.wsProvider || this.yjsAwarenessHandler === null) return;
     this.wsProvider.awareness.setLocalStateField('user', {
       color: this.ctx.getClientColor(),
-      selectedNodeId: nodeId,
+      selectedNodeId: this.selectedNodeId,
     });
   }
 
@@ -554,6 +616,7 @@ export class YjsSyncService {
   }
 
   private rehighlightNodes(nodeIds: Set<string>): void {
+    if (!this.mapAttached) return;
     for (const nodeId of nodeIds) {
       if (!this.mmpService.existNode(nodeId)) continue;
       const color = this.ctx.colorForNode(nodeId);

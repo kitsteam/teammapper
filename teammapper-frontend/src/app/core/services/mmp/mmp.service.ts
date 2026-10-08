@@ -82,9 +82,19 @@ export class MmpService implements OnDestroy {
     this.mapCreatedSubject.asObservable();
 
   private readonly branchColors: string[];
-  // additional options that are not handled within mmp, like fontMaxSize etc.
-  // `create` resolves them; before that there is no map to hold options for.
-  private additionalOptions: AdditionalMapOptions | null = null;
+  // The map settings mmp does not use, such as fontMaxSize. `create` resolves
+  // them; before that there is no map to hold settings for.
+  private readonly additionalOptionsSubject =
+    new BehaviorSubject<AdditionalMapOptions | null>(null);
+  /**
+   * The map settings of the open map, null until `create` runs. A peer's
+   * change and a change on the settings page each emit a new object.
+   */
+  public readonly additionalMapOptions$: Observable<AdditionalMapOptions | null> =
+    this.additionalOptionsSubject.asObservable();
+  // The configured defaults `create` loaded. `updateAdditionalMapOptions`
+  // fills the map settings a map lacks with them.
+  private defaultOptions: AdditionalMapOptions | null = null;
   private settingsSubscription: Subscription;
   // MapSyncService registers these; it holds the map uuid and the secret.
   private imageHandlers: ImageHandlers | null = null;
@@ -145,9 +155,10 @@ export class MmpService implements OnDestroy {
   ): Promise<MmpMap | null> {
     const creation = ++this.creations;
     // additional options do not include the standard mmp map options
-    const additionalOptions = await this.defaultAdditionalOptions();
+    const defaultOptions = await this.defaultAdditionalOptions();
     if (creation !== this.creations) return null;
-    this.additionalOptions = additionalOptions;
+    this.defaultOptions = defaultOptions;
+    this.additionalOptionsSubject.next(defaultOptions);
 
     const map: MmpMap = create(id, ref, this.mapOptions(options), data);
     this.currentMap = map;
@@ -242,25 +253,30 @@ export class MmpService implements OnDestroy {
   }
 
   /**
-   * Update the additional map settings
+   * Replace the map settings of the created map and emit them on
+   * `additionalMapOptions$`. A setting `options` lacks takes the configured
+   * default. The call runs synchronously, so YjsSyncService can apply the
+   * synced map settings before `markMapCreated`. Before `create` there is no
+   * map, and the call does nothing.
    */
-  public async updateAdditionalMapOptions(options: CachedMapOptions) {
-    const defaultOptions = await this.defaultAdditionalOptions();
+  public updateAdditionalMapOptions(options: CachedMapOptions) {
+    const defaultOptions = this.defaultOptions;
+    if (!defaultOptions) return;
 
     // A stored map may carry a key with no value, and spreading that over the
     // defaults would put the hole back.
-    this.additionalOptions = {
+    this.additionalOptionsSubject.next({
       fontMaxSize: options.fontMaxSize ?? defaultOptions.fontMaxSize,
       fontMinSize: options.fontMinSize ?? defaultOptions.fontMinSize,
       fontIncrement: options.fontIncrement ?? defaultOptions.fontIncrement,
-    };
+    });
   }
 
   /**
-   * Get the additional options, or null while no map has been created.
+   * Get the map settings, or null while no map has been created.
    */
   public getAdditionalMapOptions(): AdditionalMapOptions | null {
-    return this.additionalOptions;
+    return this.additionalOptionsSubject.getValue();
   }
 
   /**
@@ -337,18 +353,16 @@ export class MmpService implements OnDestroy {
    * Add a node in the mind mmp triggered by the user, then select it and
    * start editing its name.
    *
-   * addNode puts a child under `properties.parent`, or under the selected
-   * node when no parent is named, and adds no child when nothing is selected.
-   * Call `addTree` to add a root node.
+   * addNode puts a child under the selected node and adds no child when
+   * nothing is selected. Call `addTree` to add a root node.
    */
-  public addNode(properties?: Partial<ExportNodeProperties>) {
-    const parent = this.selectNode(properties?.parent || undefined);
+  public addNode() {
+    const parent = this.selectNode();
     if (!parent) return;
 
     const node = this.map.instance.addNode(
-      this.newNodeProperties(parent, properties),
-      parent.id,
-      properties?.id
+      this.newNodeProperties(parent),
+      parent.id
     );
     if (!node) return;
 
@@ -358,18 +372,11 @@ export class MmpService implements OnDestroy {
 
   /**
    * The properties of a new child of `parent`. The branch color comes from
-   * the given properties, then from the parent, then from the automatic
-   * branch colors setting.
+   * the parent, then from the automatic branch colors setting.
    */
-  private newNodeProperties(
-    parent: ExportNodeProperties,
-    properties?: Partial<ExportNodeProperties>
-  ): UserNodeProperties {
-    const newProps: UserNodeProperties = properties || { name: '' };
-    const branch =
-      properties?.colors?.branch ||
-      parent.colors?.branch ||
-      this.autoBranchColor();
+  private newNodeProperties(parent: ExportNodeProperties): UserNodeProperties {
+    const newProps: UserNodeProperties = { name: '' };
+    const branch = parent.colors?.branch || this.autoBranchColor();
     if (branch) newProps.colors = { branch };
     return newProps;
   }
