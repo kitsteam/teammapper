@@ -13,6 +13,8 @@ import {
   NodesMap,
   nodesMapOf,
   populateYMapFromNodeProps,
+  toPlainValue,
+  toStoredValue,
   yMapToNodeProps,
 } from './yjs-utils';
 
@@ -49,10 +51,7 @@ const clone = <T>(value: T): T =>
  * Yjs reports a delete and re-set of one key as `update`, so the check reads
  * `add` and `update`.
  */
-export function replacesMainRoot(
-  keys: KeyChanges,
-  nodesMap: NodesMap
-): boolean {
+function replacesMainRoot(keys: KeyChanges, nodesMap: NodesMap): boolean {
   for (const [key, change] of keys) {
     if (change.action === 'delete') continue;
     if (nodeAt(nodesMap, key)?.get('isRoot')) return true;
@@ -87,6 +86,29 @@ function withValueAt(
 }
 
 /**
+ * Write the value at the path below the node's `key`. When `key` holds a
+ * nested Y.Map, the write sets one key inside it. A peer with write access
+ * can store any other value under `key`, such as a plain object, and the
+ * write then replaces that value with a nested Y.Map holding the merged
+ * attributes. Two clients that replace the same value at once both write
+ * `key`, and Yjs keeps only one of their edits.
+ */
+function writeAt(
+  yNode: Y.Map<unknown>,
+  key: string,
+  path: readonly string[],
+  value: unknown
+): void {
+  const current = yNode.get(key);
+  if (current instanceof Y.Map && path.length === 1) {
+    current.set(path[0], clone(value));
+    return;
+  }
+  const next = withValueAt(toPlainValue(current), path, value);
+  yNode.set(key, toStoredValue(key, next));
+}
+
+/**
  * The map data of a collaborative map: the nodes in the Y.Doc's `nodes` map.
  * Every write carries `LOCAL_ORIGIN`, so the undo manager records it. The
  * observer reports every transaction, local, remote and undo alike, as one
@@ -94,6 +116,14 @@ function withValueAt(
  */
 export class YjsMapData implements MapData {
   private readonly listeners = new Set<Listener>();
+
+  /**
+   * Called with the transaction of a peer that replaces the main root, as an
+   * import or its undo does, before the `subscribe` listeners run. A
+   * transaction of ours never calls it.
+   */
+  public onPeerReplacement: ((transaction: Y.Transaction) => void) | null =
+    null;
 
   /**
    * @param undoManager returns the undo manager, which the sync service
@@ -131,17 +161,15 @@ export class YjsMapData implements MapData {
   }
 
   /**
-   * Write the whole top-level key the property belongs to, such as `colors`
-   * for `backgroundColor`, so a peer receives the object in one piece.
+   * Write the property, such as `backgroundColor`, under its own key in the
+   * nested Y.Map of its attribute group (see the glossary).
    */
   public updateNode(id: string, property: NodeProperty, value: unknown): void {
     const yNode = nodeAt(this.nodesMap, id);
     if (!yNode) return;
 
     const [key, ...path]: readonly string[] = NodePropertyMapping[property];
-    this.transact(() =>
-      yNode.set(key, withValueAt(yNode.get(key), path, value))
-    );
+    this.transact(() => writeAt(yNode, key, path, value));
   }
 
   public removeNode(id: string): void {
@@ -186,6 +214,7 @@ export class YjsMapData implements MapData {
   public destroy(): void {
     this.nodesMap.unobserveDeep(this.notify);
     this.listeners.clear();
+    this.onPeerReplacement = null;
   }
 
   private transact(change: () => void): void {
@@ -212,8 +241,14 @@ export class YjsMapData implements MapData {
     this.nodesMap.set(node.id, yNode);
   }
 
-  private readonly notify: Parameters<NodesMap['observeDeep']>[0] = events => {
+  private readonly notify: Parameters<NodesMap['observeDeep']>[0] = (
+    events,
+    transaction
+  ) => {
     const change = this.changeOf(events);
+    if (change.replaced && !transaction.local) {
+      this.onPeerReplacement?.(transaction);
+    }
     const empty =
       change.added.length + change.updated.length + change.removed.length === 0;
     if (empty && !change.replaced) return;

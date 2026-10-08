@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { MmpService, NODE_FONT_FAMILY } from './mmp.service';
+import {
+  AdditionalMapOptions,
+  MmpService,
+  NODE_FONT_FAMILY,
+} from './mmp.service';
 import { SettingsService } from '../settings/settings.service';
 import { ToastrService } from 'ngx-toastr';
 import { UtilsService } from '../utils/utils.service';
@@ -360,6 +364,49 @@ describe('MmpService', () => {
     });
   });
 
+  describe('updateAdditionalMapOptions', () => {
+    it('keeps the stored map settings and fills missing ones with defaults', async () => {
+      await createMap();
+
+      service.updateAdditionalMapOptions({ fontMaxSize: 70, fontIncrement: 5 });
+
+      expect(service.getAdditionalMapOptions()).toEqual({
+        fontMinSize: 12,
+        fontMaxSize: 70,
+        fontIncrement: 5,
+      });
+    });
+
+    it('resets the map settings of the previous map on the next create', async () => {
+      await createMap();
+      service.updateAdditionalMapOptions({ fontMaxSize: 70, fontIncrement: 5 });
+
+      await createMap();
+
+      expect(service.getAdditionalMapOptions()).toEqual({
+        fontMinSize: 12,
+        fontMaxSize: 24,
+        fontIncrement: 2,
+      });
+    });
+
+    it('emits the new map settings to subscribers', async () => {
+      await createMap();
+      const emitted: (AdditionalMapOptions | null)[] = [];
+      service.additionalMapOptions$.subscribe(options => emitted.push(options));
+
+      service.updateAdditionalMapOptions({ fontMaxSize: 70 });
+
+      expect(emitted[emitted.length - 1]?.fontMaxSize).toBe(70);
+    });
+
+    it('ignores map settings before a map exists', () => {
+      service.updateAdditionalMapOptions({ fontMaxSize: 70 });
+
+      expect(service.getAdditionalMapOptions()).toBeNull();
+    });
+  });
+
   describe('remove', () => {
     it('should remove the current map', async () => {
       await createMap();
@@ -388,18 +435,21 @@ describe('MmpService', () => {
         service.addNode();
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '' },
-          'selected',
-          undefined
+          'selected'
         );
       });
 
-      it('should add a node with custom properties', () => {
-        const props = { name: 'Test Node', id: '123' };
-        service.addNode(props);
+      it('gives the new node the branch color of the selected node', () => {
+        mockMap.instance.selectNode.mockReturnValue({
+          id: 'selected',
+          colors: { branch: '#123456' },
+        });
+
+        service.addNode();
+
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
-          props,
-          'selected',
-          '123'
+          { name: '', colors: { branch: '#123456' } },
+          'selected'
         );
       });
 
@@ -437,32 +487,7 @@ describe('MmpService', () => {
         service.addNode();
         expect(mockMap.instance.addNode).toHaveBeenCalledWith(
           { name: '' },
-          'second-root',
-          undefined
-        );
-      });
-
-      it('attaches the new node to the parent it names', () => {
-        mockMap.instance.selectNode.mockReturnValue({ id: 'named' });
-
-        service.addNode({ name: '', parent: 'named' });
-
-        expect(mockMap.instance.selectNode).toHaveBeenCalledWith('named');
-        expect(mockMap.instance.addNode).toHaveBeenCalledWith(
-          { name: '', parent: 'named' },
-          'named',
-          undefined
-        );
-      });
-
-      it('adds under the selected node for an empty parent', () => {
-        service.addNode({ name: '', parent: '' });
-
-        expect(mockMap.instance.selectNode).toHaveBeenCalledWith(undefined);
-        expect(mockMap.instance.addNode).toHaveBeenCalledWith(
-          { name: '', parent: '' },
-          'selected',
-          undefined
+          'second-root'
         );
       });
     });
