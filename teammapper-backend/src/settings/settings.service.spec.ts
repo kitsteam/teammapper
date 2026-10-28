@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals'
 import * as fs from 'fs'
+import * as path from 'path'
 import configService from '../config.service'
 import { SettingsService } from './settings.service'
 import { Settings } from '@teammapper/shared'
@@ -16,14 +17,15 @@ const defaultSettings: Settings = {
       pictogramApiUrl: 'https://api.example.com',
       pictogramStaticUrl: 'https://static.example.com',
     },
-    featureFlags: { pictograms: true, ai: false },
+    featureFlags: { pictograms: true, ai: false, arrows: false },
   },
   userSettings: {
-    general: { language: 'en', darkMode: false },
+    general: { language: 'en', darkMode: false, displayName: '' },
     mapOptions: {
       centerOnResize: false,
       autoBranchColors: true,
       showLinktext: false,
+      branchStyle: 'tapered',
       fontMaxSize: 70,
       fontMinSize: 15,
       fontIncrement: 5,
@@ -51,6 +53,7 @@ describe('SettingsService', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(configService.isAiEnabled as jest.Mock).mockReturnValue(false)
+    ;(configService.isArrowsEnabled as jest.Mock).mockReturnValue(false)
     ;(configService.getLLMConfig as jest.Mock).mockReturnValue({
       provider: 'openai',
       model: 'gpt-test',
@@ -71,6 +74,21 @@ describe('SettingsService', () => {
         aiModel: null,
       })
     })
+
+    it.each(['settings.dev.json', 'settings.prod.json'])(
+      'gives users an empty display name by default in %s',
+      (file) => {
+        const realFs = jest.requireActual<typeof fs>('fs')
+        const config: Settings = JSON.parse(
+          realFs.readFileSync(
+            path.join(__dirname, '../../config', file),
+            'utf8'
+          )
+        )
+
+        expect(config.userSettings.general.displayName).toBe('')
+      }
+    )
 
     it('should include user settings from the default config file', () => {
       const settings = service.getSettings()
@@ -142,7 +160,7 @@ describe('SettingsService', () => {
         ...defaultSettings,
         systemSettings: {
           ...defaultSettings.systemSettings,
-          featureFlags: { pictograms: true, ai: true },
+          featureFlags: { pictograms: true, ai: true, arrows: false },
         },
       }
       mockedFs.readFileSync.mockReturnValue(JSON.stringify(settingsWithFlags))
@@ -153,7 +171,31 @@ describe('SettingsService', () => {
       expect(settings.systemSettings.featureFlags).toEqual({
         pictograms: true,
         ai: false,
+        arrows: false,
       })
+    })
+
+    it('should turn the arrows flag on through the override file', () => {
+      const overrideSettings = {
+        systemSettings: { featureFlags: { arrows: true } },
+      }
+      mockedFs.existsSync.mockReturnValue(true)
+      mockedFs.statSync.mockReturnValue({ size: 100 } as fs.Stats)
+      mockedFs.readFileSync
+        .mockReturnValueOnce(JSON.stringify(defaultSettings))
+        .mockReturnValueOnce(JSON.stringify(overrideSettings))
+
+      const settings = service.getSettings()
+
+      expect(settings.systemSettings.featureFlags.arrows).toBe(true)
+    })
+
+    it('should turn the arrows flag on when FEATURE_ARROWS is true', () => {
+      ;(configService.isArrowsEnabled as jest.Mock).mockReturnValue(true)
+
+      const settings = service.getSettings()
+
+      expect(settings.systemSettings.featureFlags.arrows).toBe(true)
     })
 
     it('should expose the AI model when AI_ENABLED is true', () => {

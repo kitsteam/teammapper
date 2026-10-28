@@ -58,7 +58,9 @@
     "START_EDIT_NODE": "ノードテキストを編集",
     "ADD_NODE": "ノードを追加",
     "ADD_TREE": "ツリーを追加",
-    "REMOVE_NODE": "ノードを削除",
+    "REMOVE_NODE": "選択した矢印またはノードを削除",
+    "CONNECT_WITH_ARROW": "選択したノードを矢印で接続",
+    "STOP_ARROW_MODE": "矢印での接続を終了",
     "ZOOM_IN_MAP": "マップを拡大",
     "ZOOM_OUT_MAP": "マップを縮小",
     "CENTER_MAP": "マップを中央に表示",
@@ -74,7 +76,8 @@
     "CENTER_ON_RESIZING": "ウィンドウリサイズ時にマップを中央表示",
     "NODE_DRAGGING": "ノードのドラッグを許可",
     "MAP_ZOOM": "マップのズームを許可",
-    "AUTO_BRANCH_COLORS": "ブランチの色を自動選択",
+    "AUTO_BRANCH_COLORS": "作成した新しいブランチごとに色を選びます。色はノードに保存されるため、このマップの全員に表示されます。",
+    "BRANCH_STYLE": "このブラウザですべてのマップのブランチを描く方法",
     "SHARE": "共有",
     "LINK_ADD": "リンクを追加",
     "LINK_REMOVE": "リンクを削除",
@@ -144,6 +147,9 @@
       "TITLE": "接続の問題",
       "WARNING": "最近の変更が保存されていない可能性があります。",
       "RELOAD_BUTTON": "ページを再読み込み"
+    },
+    "DISPLAY_NAME": {
+      "TITLE": "あなたの表示名"
     }
   },
   "PAGES": {
@@ -181,7 +187,22 @@
     },
     "SETTINGS": {
       "AUTO_BRANCH_COLORS": "ブランチの色を自動設定",
+      "AUTO_BRANCH_COLORS_HINT": "作成した新しいブランチごとに色を選びます。色はノードに保存されるため、このマップの全員に表示されます。",
+      "BRANCH_STYLE": "ブランチのスタイル",
+      "BRANCH_STYLES": {
+        "TAPERED": "先細り",
+        "CURVED": "曲線",
+        "STRAIGHT": "直線"
+      },
       "CENTER_ON_RESIZING": "リサイズ時に中央表示",
+      "EDITOR": "エディター",
+      "FONT_SIZES": "フォントサイズ",
+      "MIND_MAP": "マインドマップ",
+      "MAP_SETTINGS": "マップ設定",
+      "MAP_SETTINGS_EXPLANATION": "このマップの全員と共有されます",
+      "NODE_NAMES_HINT": "作成したマップとノードの名前に使われます。名前はノードに保存されるため、このマップの全員に表示されます。",
+      "USER_SETTINGS": "ユーザー設定",
+      "USER_SETTINGS_EXPLANATION": "このブラウザのあなただけに適用されます",
       "FONT_MIN_SIZE": "最小フォントサイズ",
       "FONT_MAX_SIZE": "最大フォントサイズ",
       "FONT_INCREMENT": "フォントサイズの増減幅",
@@ -190,7 +211,6 @@
       "MAP_LIST": "作成済みマップ一覧",
       "OWNED_MAPS": "マイマインドマップ",
       "LAST_MAPS": "最近開いたマインドマップ",
-      "MAP_OPTIONS": "マップオプション",
       "ROOT_NODE_NAME": "ルートノード名",
       "NODE_NAME": "ノード名",
       "TITLE": "設定",
@@ -201,7 +221,9 @@
       "DELETED_AT": "削除日：",
       "DELETE_AFTER_DAYS": "このサーバーのマインドマップは {{deleteAfterDays}} 日後に削除されます。",
       "DELETE": "マインドマップを削除",
-      "CONFIRM_DELETE": "削除しますか？"
+      "CONFIRM_DELETE": "削除しますか？",
+      "DISPLAY_NAME": "表示名",
+      "DISPLAY_NAME_HINT": "マップ上の全員にこの名前が表示されます。"
     }
   },
   "MESSAGES": {
@@ -224,7 +246,13 @@
       "NODE_PROTECTED": "このブランチは保護されています。編集するには保護を解除してください。",
       "MAP_IMPORT_IN_PROGRESS": "マインドマップをインポート中...",
       "MAP_UPDATE_IN_PROGRESS": "マインドマップを更新中...",
-      "MERMAID_SEVERAL_TREES": "各ツリーはそれぞれ独立した mindmap ブロックになりました。TeamMapper 以外の Mermaid ツールは一度に 1 つのブロックしか表示しません。"
+      "MERMAID_SEVERAL_TREES": "各ツリーはそれぞれ独立した mindmap ブロックになりました。TeamMapper 以外の Mermaid ツールは一度に 1 つのブロックしか表示しません。",
+      "ARROW_REFUSED": {
+        "SELF": "矢印をノード自身に向けることはできません。",
+        "DUPLICATE": "この 2 つのノードの間には、この向きの矢印がすでにあります。",
+        "PARENT": "ブランチがすでにノードとその親ノードをつないでいます。",
+        "MISSING": "この矢印のノードはもう存在しません。"
+      }
     },
     "ERRORS": {
       "ROOT_NODE_COPIED": "ルートノードはコピーできません！",
@@ -251,6 +279,7 @@
     "AI_DESCRIPTION_REQUIRED": "マインドマップの説明を入力してください"
   },
   "GENERAL": {
+    "BRANCHES": "ブランチ",
     "REPOSITORY": "ソースコード",
     "CREATE": "マインドマップを作成",
     "DISMISS": "閉じる",
@@ -276,5 +305,8 @@
     "SAVED": "保存済み",
     "NOT_SAVED": "未保存",
     "LINKS": "リンク"
+  },
+  "CLIENT_LIST": {
+    "ANONYMOUS": "匿名"
   }
 }

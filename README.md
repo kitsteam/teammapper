@@ -82,6 +82,8 @@ For examples with a reverse proxy, see [documentation about deployment](docs/dep
 
 ### Development
 
+TeamMapper requires Node.js 24.11.1 or later. `pnpm install` refuses an older version. The `app` container already ships a newer Node.
+
 -   Start up app necessary services
 
     ```bash
@@ -134,7 +136,7 @@ docker run -v "$(pwd)":/path ghcr.io/gitleaks/gitleaks:latest dir /path --verbos
 -   Execute the tests
 
     ```bash
-    docker compose exec app pnpm --filter teammapper-backend run test:e2e
+    docker compose exec app pnpm --filter teammapper-backend run test
     ```
 
 ### Production
@@ -275,6 +277,7 @@ The settings configuration includes the following feature flags:
 
 -   `pictograms`: Disables/Enables the pictogram feature (default: disabled). Note: You have to set this flag before build time in the JSON config!
 -   `ai`: Disables/Enables AI functionality like generating mindmaps with AI. Can be controlled via the `AI_ENABLED` environment variable (default: `false`).
+-   `arrows`: Shows the button and the `alt+a` shortcut that connect two nodes with an arrow (default: disabled). Maps show, sync and export their arrows with the flag off. `FEATURE_ARROWS=true` turns it on; without the variable the JSON config decides.
 
 #### Environment variable overrides
 
@@ -283,6 +286,7 @@ The following environment variables override the feature flags from the JSON con
 | Variable | Description | Default |
 | --- | --- | --- |
 | `AI_ENABLED` | Enable AI features (mindmap generation) | `false` |
+| `FEATURE_ARROWS` | Enable creating arrows between nodes; `true` turns the flag on whatever the JSON config says | unset |
 | `DELETE_AFTER_DAYS` | Number of days before mindmaps are deleted | `30` |
 | `LOG_LEVEL` | NestJS log verbosity (`error`, `warn`, `log`, `debug`, `verbose`) | `debug` in DEV, `log` otherwise |
 

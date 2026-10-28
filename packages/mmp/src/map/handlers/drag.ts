@@ -37,8 +37,13 @@ export default class Drag {
   constructor(map: Map) {
     this.map = map;
 
+    // The filter keeps d3's default conditions and adds the drag option.
     this.dragBehavior = d3
       .drag<SVGGElement, string>()
+      .filter(
+        (event: MouseEvent) =>
+          this.map.options.drag && !event.ctrlKey && !event.button
+      )
       .on('start', (event: DragEvent, id: string) => this.started(event, id))
       .on('drag', (event: DragEvent, id: string) => this.dragged(event, id))
       .on('end', (event: DragEvent, id: string) => this.ended(event, id));
@@ -63,9 +68,14 @@ export default class Drag {
 
   /**
    * Select the node and read, once, the nodes the drag moves along with it.
+   * In arrow mode the press picks the target of the arrow instead and starts
+   * no drag.
    * @param {string} id
    */
   private started(_: DragEvent, id: string) {
+    this.session = null;
+    if (this.map.arrows.handleNodeClick(id)) return;
+
     const nodes = this.map.nodes;
     const records = nodes.scan();
     const lookup = lookupIn(records);
