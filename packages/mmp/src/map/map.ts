@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import Events, { MmpEventCallback } from './handlers/events.js';
+import Events, { MmpEventCallback, MmpEventType } from './handlers/events.js';
 import Zoom from './handlers/zoom.js';
 import Draw from './handlers/draw.js';
 import Options, { OptionParameters } from './options.js';
@@ -9,13 +9,15 @@ import Nodes from './handlers/nodes.js';
 import Export from './handlers/export.js';
 import CopyPaste from './handlers/copy-paste.js';
 import ViewState from './handlers/view-state.js';
+import Arrows from './handlers/arrows.js';
 import type { MapData } from './data/map-data.js';
 import type {
+  ArrowRefusal,
   ExportNodeProperties,
+  MapArrow,
   MapSnapshot,
-  MmpEventType,
   NodeProperty,
-  NodePropertyValue,
+  NodePropertyValues,
   UserNodeProperties,
 } from '@teammapper/shared';
 
@@ -23,7 +25,6 @@ import type {
  * Initialize all handlers and return a mmp object.
  */
 export default class MmpMap {
-  public id: string;
   public dom: DomElements;
   /** The nodes of the map. mmp reads and writes them here and keeps none. */
   public readonly data: MapData;
@@ -38,27 +39,26 @@ export default class MmpMap {
   public export: Export;
   public copyPaste: CopyPaste;
   public viewState: ViewState;
+  public arrows: Arrows;
 
-  public instance!: MmpInstance;
+  public readonly instance: MmpInstance;
 
   private readonly unsubscribeData: () => void;
+  private destroyed = false;
 
   /**
    * Create all handler instances, set some map behaviors, draw the nodes the
    * map data holds and return a mmp instance. The map selects the main root
    * and fires `nodeSelect`, and emits no `mapChange` for this first draw.
-   * @param {string} id
    * @param {HTMLElement} ref
    * @param {OptionParameters} options
    * @param {MapData} data
    */
   constructor(
-    id: string,
     ref: HTMLElement,
     options: OptionParameters | undefined,
     data: MapData
   ) {
-    this.id = id;
     this.data = data;
 
     this.events = new Events();
@@ -69,43 +69,67 @@ export default class MmpMap {
     this.drag = new Drag(this);
     this.draw = new Draw(this, ref);
     this.nodes = new Nodes(this);
+    this.arrows = new Arrows(this);
     this.export = new Export(this);
     this.copyPaste = new CopyPaste(this);
 
     this.dom = this.draw.create();
 
-    if (this.options.centerOnResize === true) {
-      d3.select(window).on('resize.' + this.id, () => {
-        this.zoom.center();
-      });
-    }
+    this.centerOnWindowResize(this.options.centerOnResize === true);
 
     if (this.options.zoom === true) {
       this.dom.svg.call(this.zoom.getZoomBehavior());
     }
 
-    this.createMmpInstance();
+    this.instance = this.createMmpInstance();
 
     this.unsubscribeData = data.subscribe(this.nodes.onChange);
     this.nodes.drawReplaced();
   }
 
   /**
+   * Center the map on every window resize, or stop doing so. The map adds
+   * and removes its own function, so it removes no listener another map
+   * registered.
+   * @param {boolean} flag
+   */
+  public centerOnWindowResize(flag: boolean) {
+    if (flag) window.addEventListener('resize', this.onResize);
+    else window.removeEventListener('resize', this.onResize);
+  }
+
+  /**
    * Remove the map for good: its svg, every subscription and the resize
-   * listener on the window.
+   * listener on the window. A second call does nothing.
    */
   private destroy = () => {
-    d3.select(window).on('resize.' + this.id, null);
+    if (this.destroyed) return;
+    this.destroyed = true;
+
+    this.centerOnWindowResize(false);
     this.unsubscribeData();
     this.events.unsubscribeAll();
     this.draw.destroy();
     this.dom.svg.remove();
+  };
 
-    const instanceRecord = this.instance as unknown as Record<string, unknown>;
-    const props = Object.keys(instanceRecord);
-    for (const prop of props) {
-      delete instanceRecord[prop];
-    }
+  /** Center the map when the window resizes. */
+  private onResize = () => {
+    this.zoom.center();
+  };
+
+  /**
+   * Switch editing and dragging on or off together. The handlers read both
+   * flags when an event arrives, so the map draws nothing anew. A name edit
+   * that runs already holds its own handlers, so turning editing off ends it,
+   * together with arrow mode and the arrow selection.
+   */
+  private setEditable = (editable: boolean) => {
+    this.options.edit = editable;
+    this.options.drag = editable;
+    if (editable) return;
+    this.draw.cancelNameEditing();
+    this.arrows.onReadOnly();
   };
 
   /**
@@ -113,15 +137,20 @@ export default class MmpMap {
    * @return {MmpInstance} mmpInstance
    */
   private createMmpInstance(): MmpInstance {
-    return (this.instance = {
+    return {
+      addArrow: this.arrows.addArrow,
       addNode: this.nodes.addNode,
       addTree: this.nodes.addTree,
       center: this.zoom.center,
       copyNode: this.copyPaste.copy,
       cutNode: this.copyPaste.cut,
       applyCoordinatesToMapSnapshot: this.nodes.applyCoordinatesToMapSnapshot,
+      deselectArrow: this.arrows.deselectArrow,
       distributeNodes: this.nodes.distributeNodes,
+      getArrows: this.arrows.getArrows,
+      getSelectedArrow: this.arrows.getSelectedArrow,
       getSelectedNode: this.nodes.getSelectedNode,
+      isArrowMode: this.arrows.isArrowMode,
       editNode: this.nodes.editNode,
       toggleBranchVisibility: this.nodes.toggleBranchVisibility,
       childNodesHidden: this.nodes.childNodesHidden,
@@ -139,12 +168,18 @@ export default class MmpMap {
       protectingNode: this.nodes.protectingNode,
       releaseBranch: this.nodes.releaseBranch,
       destroy: this.destroy,
+      removeArrow: this.arrows.removeArrow,
       removeNode: this.nodes.removeNode,
+      selectArrow: this.arrows.selectArrow,
       selectNode: this.nodes.selectNode,
+      setEditable: this.setEditable,
+      startArrowMode: this.arrows.startArrowMode,
+      stopArrowMode: this.arrows.stopArrowMode,
       updateNode: this.nodes.updateNode,
+      updateOption: this.options.update,
       zoomIn: this.zoom.zoomIn,
       zoomOut: this.zoom.zoomOut,
-    });
+    };
   }
 }
 
@@ -153,6 +188,11 @@ export default class MmpMap {
  * caller may change; the map data keeps its own.
  */
 export interface MmpInstance {
+  /**
+   * Add an arrow from `source`, or from the selected node, to `target`.
+   * Returns why the endpoint rules refuse it, or null once it is added.
+   */
+  addArrow: (target: string, source?: string) => ArrowRefusal | null;
   addNode: (
     userProperties?: UserNodeProperties,
     parentId?: string | null
@@ -162,8 +202,12 @@ export interface MmpInstance {
   copyNode: (id?: string) => void;
   cutNode: (id?: string) => boolean;
   applyCoordinatesToMapSnapshot: (mapSnapshot: MapSnapshot) => MapSnapshot;
+  deselectArrow: () => void;
   distributeNodes: () => void;
+  getArrows: () => MapArrow[];
+  getSelectedArrow: () => MapArrow | null;
   getSelectedNode: () => ExportNodeProperties | null;
+  isArrowMode: () => boolean;
   editNode: () => void;
   toggleBranchVisibility: () => void;
   childNodesHidden: (id?: string) => boolean;
@@ -172,7 +216,7 @@ export interface MmpInstance {
   exportAsJSON: () => MapSnapshot;
   exportRootProperties: () => ExportNodeProperties | null;
   highlightNode: (id: string, color: string) => void;
-  new: (nodes?: MapSnapshot) => void;
+  new: (nodes?: MapSnapshot, arrows?: unknown[]) => void;
   nodeChildren: (id?: string) => ExportNodeProperties[];
   on: <K extends MmpEventType>(
     event: K,
@@ -184,13 +228,26 @@ export interface MmpInstance {
   protectingNode: (id?: string) => string | null;
   releaseBranch: (id?: string) => void;
   destroy: () => void;
+  /** Remove the arrow with `key`, or the selected arrow. */
+  removeArrow: (key?: string) => void;
   removeNode: (id?: string) => void;
+  /** Select the arrow with `key` and leave no node selected. */
+  selectArrow: (key: string) => void;
   selectNode: (id?: string) => ExportNodeProperties | null;
-  updateNode: (
-    property: NodeProperty | string,
-    value: NodePropertyValue | unknown,
+  setEditable: (editable: boolean) => void;
+  /**
+   * Start arrow mode from the selected node. Returns false, and starts
+   * nothing, without a selected node or on a read-only map.
+   */
+  startArrowMode: () => boolean;
+  stopArrowMode: () => void;
+  updateNode: <P extends NodeProperty>(
+    property: P,
+    value: NodePropertyValues[P],
     id?: string
   ) => void;
+  /** Apply a setting the settings dialog changed to the open map. */
+  updateOption: (property: string, value: unknown) => void;
   zoomIn: (duration?: number) => void;
   zoomOut: (duration?: number) => void;
 }

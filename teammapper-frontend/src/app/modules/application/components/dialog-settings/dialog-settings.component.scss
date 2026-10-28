@@ -1,0 +1,95 @@
+div.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+
+.settings {
+  // The dialog has a fixed height, so the content fills it in place of
+  // Material's 65vh cap and scrolls when a tab runs longer.
+  max-height: none;
+
+  div.content {
+    mat-card {
+      margin-bottom: 20px;
+
+      hr {
+        margin-top: 0;
+        margin-bottom: 20px;
+        border: 0;
+        height: 1px;
+        background-color: var(--color-border);
+      }
+    }
+
+    mat-card:last-child {
+      margin-bottom: 0;
+    }
+
+    div.general-options {
+      mat-card.general-options-main {
+        padding-bottom: 15px;
+      }
+    }
+
+    div.map-options {
+      section.settings-group {
+        margin-top: 24px;
+
+        h3.settings-group-heading {
+          margin: 0;
+        }
+
+        p.settings-group-explanation {
+          margin: 4px 0 12px;
+          color: var(--color-text-secondary);
+        }
+      }
+
+      p.settings-hint {
+        margin: 4px 0 0;
+        font-size: 0.875em;
+        color: var(--color-text-secondary);
+      }
+
+      mat-card.map-options-editor {
+        mat-slide-toggle {
+          display: block;
+          margin-bottom: 20px;
+        }
+      }
+
+      mat-card.map-options-fonts {
+        mat-form-field {
+          margin-top: 16px;
+        }
+      }
+
+      mat-card.map-options-branches,
+      mat-card.map-options-nodes {
+        padding-bottom: 15px;
+
+        mat-form-field {
+          margin-right: 20px;
+        }
+      }
+    }
+
+    .dark-mode-row {
+      margin-bottom: 16px;
+
+      mat-slide-toggle {
+        display: flex;
+        align-items: center;
+      }
+    }
+
+    .language-row,
+    .display-name-row {
+      mat-form-field {
+        width: 100%;
+      }
+    }
+  }
+}

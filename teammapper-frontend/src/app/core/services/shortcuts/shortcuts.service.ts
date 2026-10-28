@@ -1,6 +1,5 @@
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { MmpService } from '../mmp/mmp.service';
-import { Router } from '@angular/router';
 import { Hotkey, HotkeysService } from 'angular2-hotkeys';
 import { distinctUntilChanged, Subscription } from 'rxjs';
 import { SettingsService } from '../settings/settings.service';
@@ -10,6 +9,10 @@ import { DialogService } from '../dialog/dialog.service';
 interface HotkeyOptions {
   keys: string | string[];
   description: string;
+  /** Whether the shortcut still acts while arrow mode is active. */
+  duringArrowMode?: boolean;
+  /** Whether the shortcut drives arrow mode, which the `arrows` flag gates. */
+  arrowsFlag?: boolean;
   callback: (event?: KeyboardEvent) => void;
 }
 
@@ -20,7 +23,6 @@ export class ShortcutsService implements OnDestroy {
   private mmpService = inject(MmpService);
   private hotkeysService = inject(HotkeysService);
   private settingsService = inject(SettingsService);
-  private router = inject(Router);
   private dialogService = inject(DialogService);
 
   private hotKeys: Hotkey[] = [];
@@ -68,7 +70,7 @@ export class ShortcutsService implements OnDestroy {
         keys: 'alt+s',
         description: 'TOOLTIPS.SETTINGS',
         callback: () => {
-          this.router.navigate(['app', 'settings']);
+          this.dialogService.openSettingsDialog();
         },
       },
       {
@@ -107,10 +109,28 @@ export class ShortcutsService implements OnDestroy {
         },
       },
       {
-        keys: ['-', 'backspace'],
+        // Mousetrap names the Delete key `del`; `delete` would never fire.
+        keys: ['-', 'backspace', 'del'],
         description: 'TOOLTIPS.REMOVE_NODE',
         callback: () => {
-          this.mmpService.removeNode();
+          this.mmpService.removeSelected();
+        },
+      },
+      {
+        keys: 'alt+a',
+        description: 'TOOLTIPS.CONNECT_WITH_ARROW',
+        arrowsFlag: true,
+        callback: () => {
+          this.mmpService.startArrowMode();
+        },
+      },
+      {
+        keys: 'esc',
+        description: 'TOOLTIPS.STOP_ARROW_MODE',
+        duringArrowMode: true,
+        arrowsFlag: true,
+        callback: () => {
+          if (this.mmpService.isArrowMode()) this.mmpService.stopArrowMode();
         },
       },
       {
@@ -242,18 +262,31 @@ export class ShortcutsService implements OnDestroy {
       : mapHotkeys;
     this.hotKeys = [
       ...appHotkeys,
-      ...mapKeys.map(options => this.requireMap(options)),
+      ...mapKeys
+        .filter(options => !options.arrowsFlag || this.arrowsEnabled())
+        .map(options => this.requireMap(options)),
     ].map(this.getHotKey);
 
     this.hotkeysService.add(this.hotKeys);
   }
 
-  /** Make the hot key do nothing while no map exists. */
+  /** Whether the `arrows` feature flag turns arrow mode on. */
+  private arrowsEnabled(): boolean {
+    const flags = this.settingsService.getCachedSystemSettings()?.featureFlags;
+    return flags?.arrows ?? false;
+  }
+
+  /**
+   * Make the hot key do nothing while no map exists, and while arrow mode is
+   * active unless the hot key is marked `duringArrowMode`.
+   */
   private requireMap(options: HotkeyOptions): HotkeyOptions {
     return {
       ...options,
       callback: event => {
-        if (this.mapCreated) options.callback(event);
+        if (!this.mapCreated) return;
+        if (this.mmpService.isArrowMode() && !options.duringArrowMode) return;
+        options.callback(event);
       },
     };
   }

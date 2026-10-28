@@ -1,3 +1,5 @@
+import type { BranchStyle } from '../constants';
+
 /**
  * Every field of T present and non-null. `Required<T>` only drops the `?`;
  * these fields are `v.nullable` in the schemas, so the null has to go too.
@@ -41,13 +43,6 @@ export interface MapNodeLink {
   href?: string | null;
 }
 
-export interface MapNodeBasics {
-  colors: MapNodeColors;
-  font: MapNodeFont;
-  name: string | null;
-  image: MapNodeImage;
-}
-
 export interface UserNodeProperties {
   name?: string | null;
   coordinates?: MapNodeCoordinates;
@@ -70,6 +65,22 @@ export type ExportNodeProperties = MapNode;
 
 export type MapSnapshot = MapNode[];
 
+/**
+ * A directed connection from a source node to a target node of the same map.
+ * It changes no parent. `arrowKey(source, target)` identifies it, so a map
+ * holds at most one arrow per source and target pair.
+ */
+export interface MapArrow {
+  source: string;
+  target: string;
+}
+
+/** The content of a JSON export: the node list and every arrow of the map. */
+export interface MapExport {
+  nodes: MapSnapshot;
+  arrows: MapArrow[];
+}
+
 export interface MapOptions {
   fontMaxSize?: number;
   fontMinSize?: number;
@@ -81,6 +92,7 @@ export type CachedMapOptions = MapOptions;
 export interface ClientMap {
   uuid: string;
   data: MapNode[];
+  arrows: MapArrow[];
   options: MapOptions;
   createdAt?: Date | number | string | null;
   lastModified?: Date | number | string | null;
@@ -127,6 +139,11 @@ export interface SystemSettingsUrls {
 export interface SystemFeatureFlags {
   pictograms: boolean;
   ai: boolean;
+  /**
+   * Shows the connect button and the arrow mode shortcuts. Drawing, selecting,
+   * removing, syncing and exporting arrows work without it.
+   */
+  arrows: boolean;
 }
 
 export interface SystemSettings {
@@ -138,6 +155,22 @@ export interface SystemSettings {
 export interface UserGeneralSettings {
   language: string;
   darkMode: boolean;
+  /**
+   * The name other clients see in the client list, normalized with
+   * `normalizeDisplayName`. The empty string means no display name.
+   */
+  displayName: string;
+}
+
+/**
+ * The `user` field of a client's awareness state. A peer of any version, a
+ * read-only one included, writes its own state unchecked, so a receiver reads
+ * every field as unknown and normalizes it.
+ */
+export interface AwarenessUser {
+  color: string;
+  selectedNodeId: string | null;
+  displayName: string;
 }
 
 /**
@@ -160,6 +193,8 @@ export interface UserMapOptions extends Required<MapOptions> {
   centerOnResize: boolean;
   autoBranchColors: boolean;
   showLinktext: boolean;
+  /** How this browser draws branches. Never synced or stored with a map. */
+  branchStyle: BranchStyle;
   defaultNode: MapNodeSettings;
   rootNode: MapNodeSettings;
 }
@@ -215,15 +250,14 @@ export interface CachedAdminMapEntry {
   cachedAdminMapValue: CachedAdminMapValue;
 }
 
-export interface MmpEventPayloadMap {
-  nodeSelect: ExportNodeProperties;
-  nodeDeselect: ExportNodeProperties;
-  nodeProtected: ExportNodeProperties;
-  /** The map data changed, by a local, a peer's or an undo write. */
-  mapChange: void;
-}
-
-export type MmpEventType = keyof MmpEventPayloadMap;
+/**
+ * Why the endpoint rules refuse an arrow:
+ * - `self`: source and target are the same node
+ * - `duplicate`: the map already holds an arrow with this source and target
+ * - `parent`: one endpoint is the parent of the other
+ * - `missing`: the map holds no node with the source or target id
+ */
+export type ArrowRefusal = 'self' | 'duplicate' | 'parent' | 'missing';
 
 export interface Settings {
   systemSettings: SystemSettings;

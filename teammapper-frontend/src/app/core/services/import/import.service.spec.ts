@@ -98,6 +98,13 @@ describe('ImportService', () => {
     expect(byName(nodes, 'B')?.colors?.branch).toMatch(/^#/);
   });
 
+  it('hands the map a bare node list, so the import leaves it no arrows', async () => {
+    await service.importFromMermaid('mindmap\n  Main\n    A');
+
+    const parsed: unknown = JSON.parse(importMap.mock.calls[0][0]);
+    expect(Array.isArray(parsed)).toBe(true);
+  });
+
   it('replaces nothing when one block fails to parse', async () => {
     const result = await service.importFromMermaid(
       'mindmap\n  Main\n\nmindmap\n  A\n  B'
@@ -105,6 +112,30 @@ describe('ImportService', () => {
 
     expect(result).toBe(false);
     expect(importMap).not.toHaveBeenCalled();
+  });
+
+  describe('when the map import rejects', () => {
+    const mermaid = 'mindmap\n  Main\n    A';
+
+    beforeEach(() => {
+      importMap.mockRejectedValue(new Error('invalid map'));
+    });
+
+    it('returns false', async () => {
+      expect(await service.importFromMermaid(mermaid)).toBe(false);
+    });
+
+    it('shows no success toast', async () => {
+      await service.importFromMermaid(mermaid);
+
+      expect(TestBed.inject(ToastrService).success).not.toHaveBeenCalled();
+    });
+
+    it('shows the import error toast', async () => {
+      await service.importFromMermaid(mermaid);
+
+      expect(TestBed.inject(ToastrService).error).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('round-trips a three-tree export to the same trees', async () => {

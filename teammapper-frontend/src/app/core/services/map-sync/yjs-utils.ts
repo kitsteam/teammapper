@@ -1,7 +1,9 @@
 import * as Y from 'yjs';
 import {
+  arrowKey,
   collectSubtreeIds,
   ExportNodeProperties,
+  MapArrow,
   YJS_SECRET_SUBPROTOCOL_PREFIX,
   YJS_SUBPROTOCOL,
 } from '@teammapper/shared';
@@ -35,11 +37,65 @@ export function nodeEntries<T>(nodesMap: Y.Map<T>): [string, Y.Map<unknown>][] {
   return entries;
 }
 
+/**
+ * The Y.Doc's `arrows` map. A peer with write access can store any value under
+ * a key, so read entries through `arrowAt` and `arrowEntries`, which skip every
+ * value that is no arrow.
+ */
+export type ArrowsMap = Y.Map<unknown>;
+
+export function arrowsMapOf(doc: Y.Doc): ArrowsMap {
+  return doc.getMap('arrows');
+}
+
+/**
+ * The arrow stored under `key`, or undefined when the entry is no Y.Map, lacks
+ * a string `source` or `target`, or sits under a key that differs from
+ * `arrowKey` of its own fields.
+ */
+export function arrowAt(
+  arrowsMap: ArrowsMap,
+  key: string
+): MapArrow | undefined {
+  const entry = arrowsMap.get(key);
+  if (!(entry instanceof Y.Map)) return undefined;
+
+  const source: unknown = entry.get('source');
+  const target: unknown = entry.get('target');
+  if (typeof source !== 'string' || typeof target !== 'string') {
+    return undefined;
+  }
+  return arrowKey(source, target) === key ? { source, target } : undefined;
+}
+
+/** Every arrow of the map with its key, without the entries that are no arrow. */
+export function arrowEntries(arrowsMap: ArrowsMap): [string, MapArrow][] {
+  const entries: [string, MapArrow][] = [];
+  arrowsMap.forEach((_entry, key) => {
+    const arrow = arrowAt(arrowsMap, key);
+    if (arrow) entries.push([key, arrow]);
+  });
+  return entries;
+}
+
 export type ClientColorMapping = Record<string, ClientColorMappingValue>;
 
 export interface ClientColorMappingValue {
   nodeId: string;
   color: string;
+  /** Normalized; the empty string means the client has no display name. */
+  displayName: string;
+  /** Whether the entry is the local client. */
+  isSelf: boolean;
+}
+
+/** One connected client, as the client list shows it. */
+export interface ClientListEntry {
+  /** The client's awareness id, unique per connection. */
+  clientId: string;
+  color: string;
+  displayName: string;
+  isSelf: boolean;
 }
 
 /** The keys a node's Y.Map holds, one per node attribute. */
@@ -166,9 +222,12 @@ export function resolveClientColor(
   );
 }
 
+/** The selections a mapping holds, which is all findAffectedNodes reads. */
+type SelectionMapping = Record<string, Pick<ClientColorMappingValue, 'nodeId'>>;
+
 export function findAffectedNodes(
-  oldMapping: ClientColorMapping,
-  newMapping: ClientColorMapping
+  oldMapping: SelectionMapping,
+  newMapping: SelectionMapping
 ): Set<string> {
   const nodes = new Set<string>();
   for (const value of Object.values(oldMapping)) {

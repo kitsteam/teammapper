@@ -58,7 +58,9 @@
     "START_EDIT_NODE": "Edit node text",
     "ADD_NODE": "Adds a node",
     "ADD_TREE": "Add a tree",
-    "REMOVE_NODE": "Removes a node",
+    "REMOVE_NODE": "Removes the selected arrow or node",
+    "CONNECT_WITH_ARROW": "Connect the selected node with an arrow",
+    "STOP_ARROW_MODE": "Stops connecting with an arrow",
     "ZOOM_IN_MAP": "Zooms in the map",
     "ZOOM_OUT_MAP": "Zooms out the map",
     "CENTER_MAP": "Centers the map",
@@ -74,7 +76,8 @@
     "CENTER_ON_RESIZING": "Centers the map on window resizing",
     "NODE_DRAGGING": "Allows to drag the nodes in the map",
     "MAP_ZOOM": "Allows to zoom the map",
-    "AUTO_BRANCH_COLORS": "Allows to choose automatically the colors of the branches",
+    "AUTO_BRANCH_COLORS": "Picks a color for each new branch you create. The color is saved on the node, so everyone on this map sees it.",
+    "BRANCH_STYLE": "How this browser draws the branches of every map",
     "SHARE": "Share",
     "LINK_ADD": "Adds a link",
     "LINK_REMOVE": "Removes a link",
@@ -144,6 +147,9 @@
       "TITLE": "Connection Issue",
       "WARNING": "Your recent changes may not have been saved.",
       "RELOAD_BUTTON": "Reload Page"
+    },
+    "DISPLAY_NAME": {
+      "TITLE": "Your display name"
     }
   },
   "PAGES": {
@@ -181,7 +187,22 @@
     },
     "SETTINGS": {
       "AUTO_BRANCH_COLORS": "Automatic branch colors",
+      "AUTO_BRANCH_COLORS_HINT": "Picks a color for each new branch you create. The color is saved on the node, so everyone on this map sees it.",
+      "BRANCH_STYLE": "Branch style",
+      "BRANCH_STYLES": {
+        "TAPERED": "Tapered",
+        "CURVED": "Curved",
+        "STRAIGHT": "Straight"
+      },
       "CENTER_ON_RESIZING": "Center on resizing",
+      "EDITOR": "Editor",
+      "FONT_SIZES": "Font sizes",
+      "MIND_MAP": "Mind map",
+      "MAP_SETTINGS": "Map settings",
+      "MAP_SETTINGS_EXPLANATION": "Shared with everyone on this map",
+      "NODE_NAMES_HINT": "Used as the name of maps and nodes you create. The name is saved on the node, so everyone on this map sees it.",
+      "USER_SETTINGS": "User settings",
+      "USER_SETTINGS_EXPLANATION": "Only for you, in this browser",
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
@@ -190,7 +211,6 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "My mindmaps",
       "LAST_MAPS": "Recently opened mindmaps",
-      "MAP_OPTIONS": "Map options",
       "ROOT_NODE_NAME": "Root node name",
       "NODE_NAME": "Node name",
       "TITLE": "Settings",
@@ -201,7 +221,9 @@
       "DELETED_AT": "Deletion date:",
       "DELETE_AFTER_DAYS": "Mindmaps will be deleted on this server after {{deleteAfterDays}} days.",
       "DELETE": "Delete mindmap",
-      "CONFIRM_DELETE": "Delete?"
+      "CONFIRM_DELETE": "Delete?",
+      "DISPLAY_NAME": "Display name",
+      "DISPLAY_NAME_HINT": "Everyone on a mind map can see this name."
     }
   },
   "MESSAGES": {
@@ -224,7 +246,13 @@
       "NODE_PROTECTED": "This branch is protected. Release the protection to edit it.",
       "MAP_IMPORT_IN_PROGRESS": "Importing mindmap...",
       "MAP_UPDATE_IN_PROGRESS": "Updating mindmap...",
-      "MERMAID_SEVERAL_TREES": "Each tree became its own mindmap block. Mermaid tools outside TeamMapper render one block at a time."
+      "MERMAID_SEVERAL_TREES": "Each tree became its own mindmap block. Mermaid tools outside TeamMapper render one block at a time.",
+      "ARROW_REFUSED": {
+        "SELF": "An arrow cannot point from a node to itself.",
+        "DUPLICATE": "An arrow between these two nodes in this direction exists already.",
+        "PARENT": "A branch already connects a node with its parent.",
+        "MISSING": "The node for this arrow no longer exists."
+      }
     },
     "ERRORS": {
       "ROOT_NODE_COPIED": "It's not possible to copy the root node!",
@@ -251,6 +279,7 @@
     "AI_DESCRIPTION_REQUIRED": "Please provide a description for the mindmap"
   },
   "GENERAL": {
+    "BRANCHES": "Branches",
     "REPOSITORY": "Source Code",
     "CREATE": "Create mind map",
     "DISMISS": "Dismiss",
@@ -276,5 +305,8 @@
     "SAVED": "Saved",
     "NOT_SAVED": "Not saved",
     "LINKS": "Links"
+  },
+  "CLIENT_LIST": {
+    "ANONYMOUS": "Anonymous"
   }
 }

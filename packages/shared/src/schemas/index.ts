@@ -81,6 +81,11 @@ export const NodeSchema = v.object({
   protected: v.optional(v.boolean(), false),
 });
 
+export const ArrowSchema = v.object({
+  source: v.pipe(v.string(), v.nonEmpty()),
+  target: v.pipe(v.string(), v.nonEmpty()),
+});
+
 /** The value each node property accepts in a single node update. */
 export const NodePropertySchemas = {
   name: NodeBasicsSchema.entries.name,
@@ -96,6 +101,34 @@ export const NodePropertySchemas = {
   fontSize: FontSchema.entries.size,
   nameColor: CssColorSchema,
 } satisfies Record<NodeProperty, v.GenericSchema>;
+
+/** The value type of each node property, as the schema accepts it. */
+export type NodePropertyValues = {
+  [P in NodeProperty]: v.InferInput<(typeof NodePropertySchemas)[P]>;
+};
+
+/**
+ * The path of each node property inside a node record. A reader finds the
+ * property through this path, and each `MapData` implementation writes an
+ * `updateNode` through it.
+ */
+export const NodePropertyMapping = {
+  name: ['name'],
+  protected: ['protected'],
+  coordinates: ['coordinates'],
+  imageSrc: ['image', 'src'],
+  imageSize: ['image', 'size'],
+  linkHref: ['link', 'href'],
+  backgroundColor: ['colors', 'background'],
+  branchColor: ['colors', 'branch'],
+  fontWeight: ['font', 'weight'],
+  fontStyle: ['font', 'style'],
+  fontSize: ['font', 'size'],
+  nameColor: ['colors', 'name'],
+} as const satisfies Record<NodeProperty, readonly string[]>;
+
+export const isNodeProperty = (property: string): property is NodeProperty =>
+  Object.keys(NodePropertyMapping).includes(property);
 
 export const MapOptionsSchema = v.partial(
   v.object({

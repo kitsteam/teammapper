@@ -58,7 +58,9 @@
     "IMAGE_SIZE": "Change la taille de l'image du noeud",
     "ADD_NODE": "Ajoute un noeud",
     "ADD_TREE": "Ajoute un arbre",
-    "REMOVE_NODE": "Supprime un noeud",
+    "REMOVE_NODE": "Supprime la flèche ou le noeud sélectionné",
+    "CONNECT_WITH_ARROW": "Relie le noeud sélectionné avec une flèche",
+    "STOP_ARROW_MODE": "Arrête la liaison avec une flèche",
     "ZOOM_IN_MAP": "Zoom sur la carte",
     "ZOOM_OUT_MAP": "Dézoom la carte",
     "CENTER_MAP": "Centre la carte",
@@ -74,7 +76,8 @@
     "CENTER_ON_RESIZING": "Centre la carte sur le redimensionnement de la fenêtre",
     "NODE_DRAGGING": "Permet de faire glisser les nœuds dans la carte",
     "MAP_ZOOM": "Permet de zoomer sur la carte",
-    "AUTO_BRANCH_COLORS": "Allows to choose automatically the colors of the branches",
+    "AUTO_BRANCH_COLORS": "Choisit une couleur pour chaque nouvelle branche que vous créez. La couleur est enregistrée sur le noeud, donc tout le monde sur cette carte la voit.",
+    "BRANCH_STYLE": "Comment ce navigateur dessine les branches de chaque carte",
     "SHARE": "Share",
     "LINK_ADD": "Adds a link",
     "LINK_REMOVE": "Removes a link",
@@ -143,6 +146,9 @@
       "TITLE": "Problème de connexion",
       "WARNING": "Vos modifications récentes n'ont peut-être pas été enregistrées.",
       "RELOAD_BUTTON": "Recharger la page"
+    },
+    "DISPLAY_NAME": {
+      "TITLE": "Votre nom d'affichage"
     }
   },
   "PAGES": {
@@ -180,7 +186,22 @@
     },
     "SETTINGS": {
       "AUTO_BRANCH_COLORS": "Automatic branch colors",
+      "AUTO_BRANCH_COLORS_HINT": "Choisit une couleur pour chaque nouvelle branche que vous créez. La couleur est enregistrée sur le noeud, donc tout le monde sur cette carte la voit.",
+      "BRANCH_STYLE": "Style des branches",
+      "BRANCH_STYLES": {
+        "TAPERED": "Effilé",
+        "CURVED": "Courbe",
+        "STRAIGHT": "Droit"
+      },
       "CENTER_ON_RESIZING": "Centrer sur le redimensionnement",
+      "EDITOR": "Éditeur",
+      "FONT_SIZES": "Tailles de police",
+      "MIND_MAP": "Carte mentale",
+      "MAP_SETTINGS": "Paramètres de la carte",
+      "MAP_SETTINGS_EXPLANATION": "Partagés avec tout le monde sur cette carte",
+      "NODE_NAMES_HINT": "Nom des cartes et des noeuds que vous créez. Le nom est enregistré sur le noeud, donc tout le monde sur cette carte le voit.",
+      "USER_SETTINGS": "Paramètres utilisateur",
+      "USER_SETTINGS_EXPLANATION": "Seulement pour vous, dans ce navigateur",
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
@@ -189,7 +210,6 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "Mes cartes mentales",
       "LAST_MAPS": "Cartes mentales récentes",
-      "MAP_OPTIONS": "Options de carte",
       "ROOT_NODE_NAME": "Nom du noeud racine",
       "NODE_NAME": "Nom du noeud",
       "TITLE": "Paramètres",
@@ -199,7 +219,9 @@
       "DELETED_AT": "Date de suppression :",
       "DELETE_AFTER_DAYS": "Ce serveur supprime les cartes après {{deleteAfterDays}} jours.",
       "DELETE": "Supprimer la carte",
-      "CONFIRM_DELETE": "Supprimer ?"
+      "CONFIRM_DELETE": "Supprimer ?",
+      "DISPLAY_NAME": "Nom d'affichage",
+      "DISPLAY_NAME_HINT": "Tout le monde sur une carte mentale voit ce nom."
     }
   },
   "MESSAGES": {
@@ -222,7 +244,13 @@
       "NODE_PROTECTED": "Cette branche est protégée. Levez la protection pour la modifier.",
       "MAP_IMPORT_IN_PROGRESS": "Importation de Mindmap en cours",
       "MAP_UPDATE_IN_PROGRESS": "Mise à jour de la carte heuristique...",
-      "MERMAID_SEVERAL_TREES": "Chaque arbre est devenu son propre bloc mindmap. Les outils Mermaid hors de TeamMapper affichent un bloc à la fois."
+      "MERMAID_SEVERAL_TREES": "Chaque arbre est devenu son propre bloc mindmap. Les outils Mermaid hors de TeamMapper affichent un bloc à la fois.",
+      "ARROW_REFUSED": {
+        "SELF": "Une flèche ne peut pas aller d'un noeud vers lui-même.",
+        "DUPLICATE": "Une flèche existe déjà entre ces deux noeuds dans ce sens.",
+        "PARENT": "Une branche relie déjà un noeud à son noeud parent.",
+        "MISSING": "Le noeud de cette flèche n'existe plus."
+      }
     },
     "ERRORS": {
       "ROOT_NODE_COPIED": "Il n'est pas possible de copier le noeud racine !",
@@ -249,6 +277,7 @@
     "AI_DESCRIPTION_REQUIRED": "Veuillez fournir une description pour la carte mentale"
   },
   "GENERAL": {
+    "BRANCHES": "Branches",
     "REPOSITORY": "Source Code",
     "CREATE": "Create mind map",
     "DISMISS": "Rejeter",
@@ -276,5 +305,8 @@
     "FONT_MIN_SIZE": "Minimal font size",
     "FONT_MAX_SIZE": "Maximal font size",
     "FONT_INCREMENT": "Font size step"
+  },
+  "CLIENT_LIST": {
+    "ANONYMOUS": "Anonyme"
   }
 }
