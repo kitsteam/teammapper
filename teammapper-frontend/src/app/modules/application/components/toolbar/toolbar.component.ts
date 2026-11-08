@@ -1,5 +1,5 @@
 import { Component, Input, inject } from '@angular/core';
-import { ExportNodeProperties } from '@teammapper/shared';
+import { ExportNodeProperties, MapFileError } from '@teammapper/shared';
 import { TranslateService, TranslatePipe } from '@ngx-translate/core';
 import { DialogService } from 'src/app/core/services/dialog/dialog.service';
 import {
@@ -52,6 +52,7 @@ export class ToolbarComponent {
   public featureFlagPictograms: boolean;
   public featureFlagAI: boolean;
   public featureFlagArrows: boolean;
+  public featureFlagSharing: boolean;
 
   public canUndo$ = this.mapSyncService.canUndo$;
   public canRedo$ = this.mapSyncService.canRedo$;
@@ -73,6 +74,7 @@ export class ToolbarComponent {
     this.featureFlagPictograms = flags?.pictograms ?? false;
     this.featureFlagAI = flags?.ai ?? false;
     this.featureFlagArrows = flags?.arrows ?? false;
+    this.featureFlagSharing = flags?.sharing ?? true;
   }
 
   public async exportMap(format: ExportFormat) {
@@ -204,16 +206,42 @@ export class ToolbarComponent {
     if (file) fileReader.readAsText(file);
   }
 
-  /** Import the map from the JSON text; the user sees an error on failure. */
+  /**
+   * Imports the map from the JSON text. Shows an error toast on failure, and
+   * one warning toast after repairing orphaned nodes.
+   */
   private async importJSON(json: string): Promise<void> {
+    let repairedNodes: number;
     try {
-      await this.mmpService.importMap(json);
-    } catch {
-      const message = await this.utilsService.translate(
-        'TOASTS.ERRORS.IMPORT_ERROR'
-      );
-      this.toastrService.error(message);
+      ({ repairedNodes } = await this.mmpService.importMap(json));
+    } catch (error) {
+      await this.showImportError(error);
+      return;
     }
+    if (repairedNodes > 0) await this.warnRepairedNodes();
+  }
+
+  /** Shows the error toast for a failed import. */
+  private async showImportError(error: unknown): Promise<void> {
+    const message = await this.utilsService.translate(
+      this.importErrorKey(error)
+    );
+    this.toastrService.error(message);
+  }
+
+  /** Shows the warning toast for an import that repaired orphaned nodes. */
+  private async warnRepairedNodes(): Promise<void> {
+    const message = await this.utilsService.translate(
+      'TOASTS.WARNINGS.IMPORT_REPAIRED_NODES'
+    );
+    this.toastrService.warning(message);
+  }
+
+  /** The toast for a failed import: a newer release's file gets its own. */
+  private importErrorKey(error: unknown): string {
+    return error instanceof MapFileError && error.fromNewerRelease
+      ? 'TOASTS.ERRORS.IMPORT_NEWER_VERSION'
+      : 'TOASTS.ERRORS.IMPORT_ERROR';
   }
 
   private isValidLink(input: string): boolean {

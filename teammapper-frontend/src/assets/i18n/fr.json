@@ -210,6 +210,7 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "Mes cartes mentales",
       "LAST_MAPS": "Cartes mentales récentes",
+      "OFFLINE_STORAGE_NOTICE": "Vos cartes mentales restent uniquement dans ce navigateur. Effacer les données du navigateur les supprime. Utilisez l'export JSON comme sauvegarde.",
       "ROOT_NODE_NAME": "Nom du noeud racine",
       "NODE_NAME": "Nom du noeud",
       "TITLE": "Paramètres",
@@ -232,6 +233,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "The file is exceeding 1 MB in file size and could cause problems during import. Please reduce the file size e.g. by removing images."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "Une nouvelle version de TeamMapper est prête. Cliquez ici pour recharger.",
+    "APP_UPDATE_BROKEN": "TeamMapper doit être rechargé pour continuer à fonctionner. Cliquez ici pour recharger.",
     "SUCCESSFULLY_DUPLICATED": "Mindmap dupliquée avec succès !",
     "URL_COPIED": "URL copié avec succès",
     "NODE_COPIED": "Nœud copié avec succès !",
@@ -245,6 +248,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Importation de Mindmap en cours",
       "MAP_UPDATE_IN_PROGRESS": "Mise à jour de la carte heuristique...",
       "MERMAID_SEVERAL_TREES": "Chaque arbre est devenu son propre bloc mindmap. Les outils Mermaid hors de TeamMapper affichent un bloc à la fois.",
+      "IMPORT_REPAIRED_NODES": "Liens rompus vers les nœuds parents supprimés.",
       "ARROW_REFUSED": {
         "SELF": "Une flèche ne peut pas aller d'un noeud vers lui-même.",
         "DUPLICATE": "Une flèche existe déjà entre ces deux noeuds dans ce sens.",
@@ -265,10 +269,15 @@
       "EXPORT_IMAGE_ERROR": "Une erreur s'est produite lors de l'exportation de l'image. Il se peut que la mind map soit trop grande.",
       "MAP_COULD_NOT_BE_FOUND": "La carte heuristique est introuvable !",
       "IMPORT_ERROR": "La Mindmap n'a pas pu être importée !",
+      "IMPORT_NEWER_VERSION": "Une version plus récente de TeamMapper a créé ce fichier de carte mentale. Mettez TeamMapper à jour pour l'importer.",
       "AI_MERMAID_ERROR": "Mermaid n'a pas pu être généré",
       "IMAGE_STORAGE_FULL": "Le stockage d'images de cette carte mentale est plein. Une image retirée libère sa place dans les 7 jours suivant son téléversement.",
       "IMAGE_UPLOAD_ERROR": "L'image n'a pas pu être téléversée.",
-      "DELETE_MAP_ERROR": "La carte n'a pas pu être supprimée."
+      "DELETE_MAP_ERROR": "La carte n'a pas pu être supprimée.",
+      "BROWSER_STORAGE_FAILED": "La carte mentale n'a pas pu être enregistrée dans le stockage de ce navigateur.",
+      "BROWSER_STORAGE_NEWER_FORMAT": "Les cartes mentales de ce navigateur ont été enregistrées par une version plus récente de TeamMapper et ne peuvent pas être ouvertes.",
+      "BROWSER_STORAGE_UPDATED": "Une version plus récente de TeamMapper a mis à jour les cartes mentales de ce navigateur. Cet onglet n'enregistre plus aucune modification. Rechargez la page pour continuer à modifier.",
+      "BROWSER_STORAGE_UPDATE_FAILED": "La carte mentale n'a pas pu être mise à jour vers la version actuelle de TeamMapper. Elle reste inchangée."
     },
     "DELETE_MAP_SUCCESS": "Mindmap supprimée avec succès !",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid généré avec succès !",
@@ -279,6 +288,8 @@
   "GENERAL": {
     "BRANCHES": "Branches",
     "REPOSITORY": "Source Code",
+    "IMPRINT": "Mentions légales",
+    "PRIVACY": "Confidentialité",
     "CREATE": "Create mind map",
     "DISMISS": "Rejeter",
     "SAVED_MAPS": "Saved maps",
@@ -305,6 +316,10 @@
     "FONT_MIN_SIZE": "Minimal font size",
     "FONT_MAX_SIZE": "Maximal font size",
     "FONT_INCREMENT": "Font size step"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "Mode hors ligne",
+    "DESCRIPTION": "Vos cartes mentales restent dans ce navigateur. Personne d'autre ne peut les ouvrir ni les modifier, et les modifications ne sont pas synchronisées avec d'autres personnes ou appareils."
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "Anonyme"

@@ -210,6 +210,7 @@
       "MAP_LIST": "已创建思维导图列表",
       "OWNED_MAPS": "我的思维导图",
       "LAST_MAPS": "最近打开的思维导图",
+      "OFFLINE_STORAGE_NOTICE": "您的思维导图只保存在此浏览器中。清除浏览器数据会删除这些思维导图。请使用 JSON 导出作为备份。",
       "ROOT_NODE_NAME": "根节点名称",
       "NODE_NAME": "节点名称",
       "TITLE": "设置",
@@ -232,6 +233,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "文件大小超过 1 MB，可能会导致导入时出现问题。请通过删除图片等方式减小文件大小。"
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "TeamMapper 新版本已就绪。点击此处重新加载。",
+    "APP_UPDATE_BROKEN": "TeamMapper 需要重新加载才能继续使用。点击此处重新加载。",
     "SUCCESSFULLY_DUPLICATED": "思维导图复制成功！",
     "URL_COPIED": "成功复制 URL",
     "NODE_COPIED": "节点复制成功",
@@ -245,6 +248,7 @@
       "MAP_IMPORT_IN_PROGRESS": "心智图导入中",
       "MAP_UPDATE_IN_PROGRESS": "更新思维导图",
       "MERMAID_SEVERAL_TREES": "每棵树都成为一个独立的 mindmap 块。TeamMapper 之外的 Mermaid 工具一次只能渲染一个块。",
+      "IMPORT_REPAIRED_NODES": "已删除指向父节点的损坏链接。",
       "ARROW_REFUSED": {
         "SELF": "箭头不能从节点指向它自己。",
         "DUPLICATE": "这两个节点之间已有一条同方向的箭头。",
@@ -265,10 +269,15 @@
       "EXPORT_IMAGE_ERROR": "导出图像时发生错误。思维导图可能过大。",
       "MAP_COULD_NOT_BE_FOUND": "找不到思维导图！",
       "IMPORT_ERROR": "无法导入思维导图！",
+      "IMPORT_NEWER_VERSION": "此思维导图文件由更新版本的 TeamMapper 创建。请更新 TeamMapper 后再导入。",
       "AI_MERMAID_ERROR": "无法生成Mermaid",
       "IMAGE_STORAGE_FULL": "此思维导图的图片存储空间已满。移除的图片会在上传后 7 天内释放其空间。",
       "IMAGE_UPLOAD_ERROR": "无法上传图片。",
-      "DELETE_MAP_ERROR": "无法删除思维导图。"
+      "DELETE_MAP_ERROR": "无法删除思维导图。",
+      "BROWSER_STORAGE_FAILED": "无法将思维导图保存到此浏览器的存储中。",
+      "BROWSER_STORAGE_NEWER_FORMAT": "此浏览器中的思维导图由较新版本的 TeamMapper 保存，无法打开。",
+      "BROWSER_STORAGE_UPDATED": "较新版本的 TeamMapper 已更新此浏览器中的思维导图。此标签页不再保存更改。请重新加载页面以继续编辑。",
+      "BROWSER_STORAGE_UPDATE_FAILED": "无法将思维导图更新到当前版本的 TeamMapper，思维导图保持不变。"
     },
     "DELETE_MAP_SUCCESS": "思维导图已成功删除！",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid生成成功！",
@@ -279,6 +288,8 @@
   "GENERAL": {
     "BRANCHES": "分支",
     "REPOSITORY": "源代码",
+    "IMPRINT": "法律声明",
+    "PRIVACY": "隐私",
     "CREATE": "创建思维导图",
     "DISMISS": "解除",
     "SAVED_MAPS": "已保存的思维导图",
@@ -305,6 +316,10 @@
     "FONT_MIN_SIZE": "最小字体大小",
     "FONT_MAX_SIZE": "最大字体大小",
     "FONT_INCREMENT": "字体大小步长"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "离线模式",
+    "DESCRIPTION": "您的思维导图只保存在此浏览器中。其他人无法打开或编辑它们，所做的更改也不会与其他人或设备同步。"
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "匿名"

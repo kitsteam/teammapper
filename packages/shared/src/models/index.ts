@@ -1,4 +1,4 @@
-import type { BranchStyle } from '../constants';
+import type { BranchStyle, MAP_FILE_VERSION } from '../constants';
 
 /**
  * Every field of T present and non-null. `Required<T>` only drops the `?`;
@@ -75,8 +75,13 @@ export interface MapArrow {
   target: string;
 }
 
-/** The content of a JSON export: the node list and every arrow of the map. */
+/**
+ * The content of a JSON export: the map file version, the node list and
+ * every arrow of the map.
+ */
 export interface MapExport {
+  /** The map file version a new export writes. */
+  version: typeof MAP_FILE_VERSION;
   nodes: MapSnapshot;
   arrows: MapArrow[];
 }
@@ -97,7 +102,9 @@ export interface ClientMap {
   createdAt?: Date | number | string | null;
   lastModified?: Date | number | string | null;
   lastAccessed?: Date | number | string | null;
-  deleteAfterDays?: number;
+  /** Null when the map never expires. */
+  deleteAfterDays?: number | null;
+  /** Null when the map never expires. */
   deletedAt?: Date | number | string | null;
   writable?: boolean;
 }
@@ -134,6 +141,10 @@ export interface SystemSettingsInfo {
 export interface SystemSettingsUrls {
   pictogramApiUrl: string;
   pictogramStaticUrl: string;
+  /** Target of the imprint link; null hides the link. */
+  imprintUrl: string | null;
+  /** Target of the privacy policy link; null hides the link. */
+  privacyUrl: string | null;
 }
 
 export interface SystemFeatureFlags {
@@ -144,6 +155,8 @@ export interface SystemFeatureFlags {
    * removing, syncing and exporting arrows work without it.
    */
   arrows: boolean;
+  /** Shows the share button and opens the share dialog, which duplicates maps. */
+  sharing: boolean;
 }
 
 export interface SystemSettings {
@@ -226,8 +239,10 @@ export interface CachedMap {
   createdAt: number;
   data: MapSnapshot;
   uuid: string;
-  deleteAfterDays: number;
-  deletedAt: number;
+  /** Null when the map never expires. */
+  deleteAfterDays: number | null;
+  /** Null when the map never expires. */
+  deletedAt: number | null;
   options: CachedMapOptions;
 }
 
@@ -240,7 +255,8 @@ export interface CachedAdminMapValue {
   // Legacy rows carry neither, so the /maps listing sends both as null.
   adminId: string | null;
   modificationSecret: string | null;
-  ttl: Date | number | string;
+  /** Null when the map never expires. */
+  ttl: Date | number | string | null;
   createdAt: Date | number | string | null;
   rootName: string | null;
 }

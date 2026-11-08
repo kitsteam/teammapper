@@ -211,6 +211,7 @@
       "MAP_LIST": "Liste erstellter Mindmaps",
       "OWNED_MAPS": "Meine Mindmaps",
       "LAST_MAPS": "Zuletzt geöffnete Mindmaps",
+      "OFFLINE_STORAGE_NOTICE": "Deine Mindmaps bleiben nur in diesem Browser. Wenn du die Browserdaten löschst, gehen sie verloren. Nutze den JSON-Export als Sicherung.",
       "NODE_NAME": "Bezeichnung von Knoten",
       "ROOT_NODE_NAME": "Bezeichnung des Wurzelknotens",
       "TITLE": "Einstellungen",
@@ -235,6 +236,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "Die Datei ist größer als 1 MB und kann möglicherweise später nicht importiert werden. Bitte Datei verkleinern (z.B. Bilder entfernen)."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "Eine neue Version von TeamMapper ist bereit. Klicke hier, um neu zu laden.",
+    "APP_UPDATE_BROKEN": "TeamMapper muss neu geladen werden, um weiter zu funktionieren. Klicke hier, um neu zu laden.",
     "SUCCESSFULLY_DUPLICATED": "Mindmap erfolgreich dupliziert!",
     "URL_COPIED": "URL erfolgreich kopiert!",
     "NODE_COPIED": "Knoten erfolgreich kopiert!",
@@ -248,6 +251,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Mindmap wird importiert...",
       "MAP_UPDATE_IN_PROGRESS": "Mindmap wird aktualisiert...",
       "MERMAID_SEVERAL_TREES": "Jeder Baum wurde zu einem eigenen mindmap-Block. Mermaid-Werkzeuge außerhalb von TeamMapper stellen nur einen Block auf einmal dar.",
+      "IMPORT_REPAIRED_NODES": "Fehlerhafte Verbindungen zu Elternknoten entfernt.",
       "ARROW_REFUSED": {
         "SELF": "Ein Pfeil kann nicht von einem Knoten auf sich selbst zeigen.",
         "DUPLICATE": "Zwischen diesen beiden Knoten gibt es in dieser Richtung schon einen Pfeil.",
@@ -268,10 +272,15 @@
       "EXPORT_IMAGE_ERROR": "Beim Bild-Export ist ein Fehler aufgetreten. Womöglich ist die Mindmap zu groß.",
       "MAP_COULD_NOT_BE_FOUND": "Mindmap konnte nicht gefunden werden!",
       "IMPORT_ERROR": "Mindmap konnte nicht importiert werden!",
+      "IMPORT_NEWER_VERSION": "Eine neuere TeamMapper-Version hat diese Mindmap-Datei erstellt. Aktualisiere TeamMapper, um sie zu importieren.",
       "AI_MERMAID_ERROR": "Mermaid konnte nicht generiert werden.",
       "IMAGE_STORAGE_FULL": "Der Bildspeicher dieser Mindmap ist voll. Ein entferntes Bild gibt seinen Platz innerhalb von 7 Tagen nach dem Hochladen frei.",
       "IMAGE_UPLOAD_ERROR": "Das Bild konnte nicht hochgeladen werden.",
-      "DELETE_MAP_ERROR": "Die Mindmap konnte nicht gelöscht werden."
+      "DELETE_MAP_ERROR": "Die Mindmap konnte nicht gelöscht werden.",
+      "BROWSER_STORAGE_FAILED": "Die Mindmap konnte nicht im Speicher dieses Browsers gesichert werden.",
+      "BROWSER_STORAGE_NEWER_FORMAT": "Die Mindmaps in diesem Browser wurden von einer neueren Version von TeamMapper gespeichert und können nicht geöffnet werden.",
+      "BROWSER_STORAGE_UPDATED": "Eine neuere Version von TeamMapper hat die Mindmaps in diesem Browser aktualisiert. Dieser Tab speichert keine Änderungen mehr. Bitte die Seite neu laden, um weiterzuarbeiten.",
+      "BROWSER_STORAGE_UPDATE_FAILED": "Die Mindmap konnte nicht auf die aktuelle Version von TeamMapper aktualisiert werden. Sie bleibt unverändert."
     },
     "DELETE_MAP_SUCCESS": "Mindmap erfolgreich gelöscht!",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid erfolgreich generiert",
@@ -283,6 +292,8 @@
     "BRANCHES": "Zweige",
     "CREATE": "Mindmap erstellen",
     "REPOSITORY": "Source Code",
+    "IMPRINT": "Impressum",
+    "PRIVACY": "Datenschutz",
     "DISMISS": "Verwerfen",
     "SAVED_MAPS": "Gespeicherte Mindmaps",
     "MERMAID": "Mermaid (.mmd)",
@@ -306,6 +317,10 @@
     "SAVED": "Gespeichert",
     "NOT_SAVED": "Nicht gespeichert",
     "LINKS": "Links"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "Offline-Modus",
+    "DESCRIPTION": "Deine Mindmaps bleiben in diesem Browser. Niemand sonst kann sie öffnen oder bearbeiten, und Änderungen werden nicht mit anderen Personen oder Geräten synchronisiert."
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "Anonym"

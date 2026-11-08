@@ -36,7 +36,9 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-debug}
 
       TESTING_PLAYWRIGHT_WS_ENDPOINT: "ws://playwright:9323"
-      TESTING_PLAYWRIGHT_BASE_URL: "http://app:4200"
+      # Chromium's HSTS preload list covers the .app top-level domain and
+      # upgrades http://app to https, so the browser uses the alias below.
+      TESTING_PLAYWRIGHT_BASE_URL: "http://teammapper:4200"
       PLAYWRIGHT_MCP_CDP_ENDPOINT: "http://chrome:9222"
     ports:
       - "${APP_FRONTEND_PORT:-4200}:4200"
@@ -47,6 +49,10 @@ services:
       - .:/home/node/app
     depends_on:
       - postgres
+    networks:
+      default:
+        aliases:
+          - teammapper
 
   postgres:
     image: postgres:15-alpine

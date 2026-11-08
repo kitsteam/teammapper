@@ -13,7 +13,7 @@ import { ToolbarComponent } from './toolbar.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
-import { ExportNodeProperties } from '@teammapper/shared';
+import { ExportNodeProperties, MapFileError } from '@teammapper/shared';
 import { of, Observable, BehaviorSubject, Subject } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -40,7 +40,7 @@ class MmpServiceStub {
   childNodesHidden = jest.fn().mockReturnValue(false);
   distributeNodes = jest.fn();
   addNodeImage = jest.fn();
-  importMap = jest.fn();
+  importMap = jest.fn().mockResolvedValue({ repairedNodes: 0 });
   protectingNode = jest.fn().mockReturnValue(null);
   toggleBranchProtection = jest.fn();
   copyNode = jest.fn();
@@ -61,7 +61,7 @@ interface TestContext {
     canUndo$: Observable<boolean>;
     canRedo$: Observable<boolean>;
   };
-  toastrService: { error: jest.Mock };
+  toastrService: { error: jest.Mock; warning: jest.Mock };
   translateService: TranslateService;
   canUndoSubject: BehaviorSubject<boolean>;
   canRedoSubject: BehaviorSubject<boolean>;
@@ -79,9 +79,9 @@ async function setupTestBed(): Promise<TestContext> {
     canRedo$: canRedoSubject.asObservable(),
   };
 
-  const toastrService = { error: jest.fn() };
+  const toastrService = { error: jest.fn(), warning: jest.fn() };
   const utilsService = {
-    translate: jest.fn().mockResolvedValue('import failed'),
+    translate: jest.fn((key: string) => Promise.resolve(key)),
   };
 
   await TestBed.configureTestingModule({
@@ -104,7 +104,12 @@ async function setupTestBed(): Promise<TestContext> {
         provide: SettingsService,
         useValue: {
           getCachedSystemSettings: jest.fn().mockReturnValue({
-            featureFlags: { pictograms: false, ai: false, arrows: false },
+            featureFlags: {
+              pictograms: false,
+              ai: false,
+              arrows: false,
+              sharing: true,
+            },
           }),
         },
       },
@@ -370,15 +375,51 @@ describe('ToolbarComponent', () => {
 
       await readJsonFile('{not json');
 
-      expect(ctx.toastrService.error).toHaveBeenCalledWith('import failed');
+      expect(ctx.toastrService.error).toHaveBeenCalledWith(
+        'TOASTS.ERRORS.IMPORT_ERROR'
+      );
     });
 
-    it('shows no error toast when importMap resolves', async () => {
-      ctx.mmpService.importMap.mockResolvedValue(undefined);
+    it('shows the import error toast for a file the import rejects', async () => {
+      ctx.mmpService.importMap.mockRejectedValue(
+        new MapFileError('nodes', 'A node fails the version 2 schema')
+      );
 
+      await readJsonFile('{"nodes": [{}]}');
+
+      expect(ctx.toastrService.error).toHaveBeenCalledWith(
+        'TOASTS.ERRORS.IMPORT_ERROR'
+      );
+    });
+
+    it('tells the user when a newer release wrote the file', async () => {
+      ctx.mmpService.importMap.mockRejectedValue(
+        new MapFileError('version', 'newer release', true)
+      );
+
+      await readJsonFile('{"version": 3, "nodes": []}');
+
+      expect(ctx.toastrService.error).toHaveBeenCalledWith(
+        'TOASTS.ERRORS.IMPORT_NEWER_VERSION'
+      );
+    });
+
+    it('shows no toast when the import changed nothing', async () => {
       await readJsonFile('[]');
 
       expect(ctx.toastrService.error).not.toHaveBeenCalled();
+      expect(ctx.toastrService.warning).not.toHaveBeenCalled();
+    });
+
+    it('shows one warning toast when the import repaired orphaned nodes', async () => {
+      ctx.mmpService.importMap.mockResolvedValue({ repairedNodes: 3 });
+
+      await readJsonFile('[]');
+
+      expect(ctx.toastrService.warning).toHaveBeenCalledTimes(1);
+      expect(ctx.toastrService.warning).toHaveBeenCalledWith(
+        'TOASTS.WARNINGS.IMPORT_REPAIRED_NODES'
+      );
     });
   });
 
@@ -638,6 +679,53 @@ describe('ToolbarComponent', () => {
       const stopped = ctx.mmpService.stopArrowMode.mock.invocationCallOrder[0];
       const acted = ctx.mmpService.copyNode.mock.invocationCallOrder[0];
       expect(stopped).toBeLessThan(acted);
+    });
+  });
+
+  describe('share', () => {
+    const button = (): HTMLButtonElement | null =>
+      ctx.fixture.nativeElement.querySelector('#share-button');
+
+    it('shows the share button while the sharing flag is on', () => {
+      expect(button()).not.toBeNull();
+    });
+
+    it('opens the share dialog when the button is clicked', () => {
+      button()?.click();
+
+      expect(TestBed.inject(DialogService).openShareDialog).toHaveBeenCalled();
+    });
+
+    it('reads the sharing flag from the system settings', () => {
+      jest
+        .mocked(TestBed.inject(SettingsService).getCachedSystemSettings)
+        .mockReturnValue({
+          info: { name: 'TeamMapper', version: '0', aiModel: null },
+          urls: {
+            pictogramApiUrl: '',
+            pictogramStaticUrl: '',
+            imprintUrl: null,
+            privacyUrl: null,
+          },
+          featureFlags: {
+            pictograms: false,
+            ai: false,
+            arrows: false,
+            sharing: false,
+          },
+        });
+
+      const fixture = TestBed.createComponent(ToolbarComponent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('#share-button')).toBeNull();
+    });
+
+    it('shows no share button while the sharing flag is off', () => {
+      ctx.component.featureFlagSharing = false;
+      refresh(ctx);
+
+      expect(button()).toBeNull();
     });
   });
 

@@ -91,4 +91,50 @@ describe('ConfigService', () => {
       expect(config.getTrustProxy()).toBe(expected)
     })
   })
+
+  describe('pictogram upstreams', () => {
+    it('defaults to the public ARASAAC hosts', () => {
+      const config = createConfigService({})
+      expect(config.getPictogramApiUrl()).toBe('https://api.arasaac.org/api')
+      expect(config.getPictogramImagesUrl()).toBe('https://static.arasaac.org/')
+    })
+
+    it('reads PICTOGRAM_API_URL and PICTOGRAM_IMAGES_URL', () => {
+      const config = createConfigService({
+        PICTOGRAM_API_URL: 'https://api.teammapper.localhost/api',
+        PICTOGRAM_IMAGES_URL: 'https://static.teammapper.localhost/',
+      })
+      expect(config.getPictogramApiUrl()).toBe(
+        'https://api.teammapper.localhost/api'
+      )
+      expect(config.getPictogramImagesUrl()).toBe(
+        'https://static.teammapper.localhost/'
+      )
+    })
+  })
+
+  describe('legal urls', () => {
+    it.each([undefined, '', '  '])('reads IMPRINT_URL=%p as null', (value) => {
+      const config = createConfigService({ IMPRINT_URL: value })
+      expect(config.getImprintUrl()).toBeNull()
+    })
+
+    it.each([undefined, '', '  '])('reads PRIVACY_URL=%p as null', (value) => {
+      const config = createConfigService({ PRIVACY_URL: value })
+      expect(config.getPrivacyUrl()).toBeNull()
+    })
+
+    it('reads IMPRINT_URL and PRIVACY_URL without surrounding blanks', () => {
+      const config = createConfigService({
+        IMPRINT_URL: ' https://teammapper.localhost/imprint ',
+        PRIVACY_URL: 'https://teammapper.localhost/privacy',
+      })
+      expect(config.getImprintUrl()).toBe(
+        'https://teammapper.localhost/imprint'
+      )
+      expect(config.getPrivacyUrl()).toBe(
+        'https://teammapper.localhost/privacy'
+      )
+    })
+  })
 })

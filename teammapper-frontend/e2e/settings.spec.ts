@@ -29,15 +29,23 @@ test('deletes a map that is not open from the map list', async ({ page }) => {
     await page.goto('/');
     await page.getByText('Create mind map').click();
     await page.waitForURL(/\/map\/[0-9a-f-]+/);
+    // The URL changes before initialization finishes. Keep the page open
+    // until the map has loaded before navigating away or opening settings.
+    // The map list on the landing page also shows root names, so wait for a
+    // button only the loaded map enables.
+    await expect(page.locator('#add-tree-button')).toBeEnabled();
     const match = page.url().match(/\/map\/([0-9a-f-]+)/);
     if (!match) throw new Error(`No map id in ${page.url()}`);
     return match[1];
   };
   const closedMapId = await createMap();
   const openMapId = await createMap();
+  expect(openMapId).not.toBe(closedMapId);
 
   await page.locator('#settings-button').click();
-  await page.locator('.mat-mdc-tab').nth(2).click();
+  await page
+    .getByRole('tab', { name: 'List of created maps', exact: true })
+    .click();
 
   const closedMapRow = page.locator('mat-list-item', {
     has: page.locator(`a[href*="${closedMapId}"]`),
@@ -46,6 +54,7 @@ test('deletes a map that is not open from the map list', async ({ page }) => {
     has: page.locator(`a[href*="${openMapId}"]`),
   });
   await expect(closedMapRow.first()).toBeVisible();
+  await expect(openMapRow.first()).toBeVisible();
 
   page.once('dialog', dialog => dialog.accept());
   await closedMapRow.first().locator('.delete-map-button').click();
@@ -168,7 +177,7 @@ test('groups the mind map tab into map settings and user settings', async ({
   ).toBeVisible();
 });
 
-test('disables the map settings for a read-only viewer only', async ({
+test('disables the map settings for a read-only viewer only @server', async ({
   page,
   browser,
 }) => {
@@ -196,7 +205,7 @@ test('disables the map settings for a read-only viewer only', async ({
   }
 });
 
-test('draws curved branches for this browser only', async ({
+test('draws curved branches for this browser only @server', async ({
   page,
   browser,
 }) => {

@@ -210,6 +210,7 @@
       "MAP_LIST": "Elenco delle mappe create",
       "OWNED_MAPS": "Le mie mappe mentali",
       "LAST_MAPS": "Mappe mentali recenti",
+      "OFFLINE_STORAGE_NOTICE": "Le tue mappe mentali restano solo in questo browser. Se cancelli i dati del browser, vengono eliminate. Usa l'esportazione JSON come backup.",
       "ROOT_NODE_NAME": "Nome nodo radice",
       "NODE_NAME": "Nome nodo",
       "TITLE": "Impostazioni",
@@ -232,6 +233,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "Il file supera 1 MB di dimensione e potrebbe causare problemi durante l'importazione. Riduci la dimensione del file, ad esempio rimuovendo le immagini."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "Una nuova versione di TeamMapper è pronta. Fai clic qui per ricaricare.",
+    "APP_UPDATE_BROKEN": "TeamMapper deve essere ricaricato per continuare a funzionare. Fai clic qui per ricaricare.",
     "SUCCESSFULLY_DUPLICATED": "Mappa mentale duplicata con successo!",
     "URL_COPIED": "URL copiato con successo",
     "NODE_COPIED": "Nodo copiato con successo!",
@@ -245,6 +248,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Importazione della mappa mentale in corso",
       "MAP_UPDATE_IN_PROGRESS": "Aggiornamento della mappa mentale...",
       "MERMAID_SEVERAL_TREES": "Ogni albero è diventato un proprio blocco mindmap. Gli strumenti Mermaid al di fuori di TeamMapper mostrano un blocco alla volta.",
+      "IMPORT_REPAIRED_NODES": "Collegamenti interrotti ai nodi padre rimossi.",
       "ARROW_REFUSED": {
         "SELF": "Una freccia non può puntare da un nodo a se stesso.",
         "DUPLICATE": "Esiste già una freccia tra questi due nodi in questa direzione.",
@@ -265,10 +269,15 @@
       "EXPORT_IMAGE_ERROR": "Si è verificato un errore durante l'esportazione dell'immagine. La mappa mentale potrebbe essere troppo grande.",
       "MAP_COULD_NOT_BE_FOUND": "Impossibile trovare la mappa mentale!",
       "IMPORT_ERROR": "Non è stato possibile importare la mappa mentale!",
+      "IMPORT_NEWER_VERSION": "Una versione più recente di TeamMapper ha creato questo file di mappa mentale. Aggiorna TeamMapper per importarlo.",
       "AI_MERMAID_ERROR": "Mermaid non può essere generato",
       "IMAGE_STORAGE_FULL": "Lo spazio per le immagini di questa mappa mentale è pieno. Un'immagine rimossa libera il suo spazio entro 7 giorni dal caricamento.",
       "IMAGE_UPLOAD_ERROR": "Non è stato possibile caricare l'immagine.",
-      "DELETE_MAP_ERROR": "Non è stato possibile eliminare la mappa mentale."
+      "DELETE_MAP_ERROR": "Non è stato possibile eliminare la mappa mentale.",
+      "BROWSER_STORAGE_FAILED": "Non è stato possibile salvare la mappa mentale nella memoria di questo browser.",
+      "BROWSER_STORAGE_NEWER_FORMAT": "Le mappe mentali in questo browser sono state salvate da una versione più recente di TeamMapper e non possono essere aperte.",
+      "BROWSER_STORAGE_UPDATED": "Una versione più recente di TeamMapper ha aggiornato le mappe mentali in questo browser. Questa scheda non salva più le modifiche. Ricarica la pagina per continuare a modificare.",
+      "BROWSER_STORAGE_UPDATE_FAILED": "Non è stato possibile aggiornare la mappa mentale alla versione attuale di TeamMapper. Rimane invariata."
     },
     "DELETE_MAP_SUCCESS": "Mappa mentale cancellata con successo!",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid generato con successo!",
@@ -279,6 +288,8 @@
   "GENERAL": {
     "BRANCHES": "Rami",
     "REPOSITORY": "Codice sorgente",
+    "IMPRINT": "Note legali",
+    "PRIVACY": "Privacy",
     "APPLICATION": "Applicazione",
     "CREATE": "Provala",
     "DISMISS": "Chiudi",
@@ -306,6 +317,10 @@
     "FONT_MIN_SIZE": "Dimensione minima del font",
     "FONT_MAX_SIZE": "Dimensione massima del font",
     "FONT_INCREMENT": "Passo dimensione del font"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "Modalità offline",
+    "DESCRIPTION": "Le tue mappe mentali restano in questo browser. Nessun altro può aprirle o modificarle, e le modifiche non vengono sincronizzate con altre persone o dispositivi."
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "Anonimo"
