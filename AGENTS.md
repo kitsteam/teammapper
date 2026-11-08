@@ -20,6 +20,10 @@ opens with a table of the other words to avoid.
 Add an entry when you introduce a concept, and correct one when a rename makes
 it wrong.
 
+Keep glossary entries short and domain-specific, with no code or implementation
+details. Use standard mind mapping terms for concepts the glossary does not
+yet define.
+
 ## Test fixtures
 
 Never write binary data into a test: no byte arrays, no base64 literals, no
@@ -53,8 +57,29 @@ Run the suite with `pnpm run test:e2e`. The config declares the backend and the
 frontend as `webServer` entries with `reuseExistingServer`, so it adopts servers
 already listening on 3000 and 4200 and starts nothing.
 
-`webkit` is the only project. Chrome forces a redirect to https and cannot run
-the suite.
+The config declares two projects, `webkit` and `chromium`, and every test must
+pass in both. CI runs `webkit` alone to keep the job short, so run `chromium`
+locally before you push a change to the suite. Point the browser at the `teammapper` network alias of the `app`
+service, never at the hostname `app`: Chromium's HSTS preload list covers the
+`.app` top-level domain, so it upgrades `http://app:4200` to https and fails
+with `ERR_SSL_PROTOCOL_ERROR`. A new alias also needs an entry in
+`allowedHosts` of the `serve` target in `teammapper-frontend/angular.json`.
+
+`pnpm run test:e2e:offline` in `teammapper-frontend` runs the suite against
+the offline build. `playwright.offline.config.ts` lists the web specs it
+reuses plus `e2e-offline/`, and starts the offline dev server alone. Keep it
+free of the backend: a spec that needs the server does not belong in the
+offline list. When a reused spec holds a test that needs the server, tag that
+test by ending its title with `@server`: the offline config excludes the tag,
+and the web config runs the test as before.
+The offline dev server listens on 4200 like the web one, so stop the web dev
+server first, or `reuseExistingServer` tests the web build instead.
+
+Only the offline build may register a service worker. Keep `serviceWorker`
+`false` in the base build options. `e2e-offline/service-worker.spec.ts` runs
+against the built site, because the worker rejects files the dev server
+rewrites. The spec skips itself in the docker setup, where the browser has no
+secure context.
 
 Three version strings must match, because the protocol between client and
 server is not stable across versions:

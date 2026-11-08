@@ -30,9 +30,10 @@
       http-equiv="Content-Security-Policy"
       content="
         default-src 'self' *.kits.app;
+        worker-src 'self' blob:;
         connect-src 'self' *.arasaac.org *.kits.app ws: wss:;
         style-src 'self' *.kits.app 'unsafe-inline';
-        img-src 'self' *.kits.app *.arasaac.org data:;
+        img-src 'self' *.kits.app *.arasaac.org data: blob:;
         " />
 
     <!-- apple icons and splash screens -->

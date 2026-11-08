@@ -14,10 +14,12 @@ const defaultSettings: Settings = {
   systemSettings: {
     info: { name: 'TeamMapper', version: '1.0.0', aiModel: null },
     urls: {
-      pictogramApiUrl: 'https://api.example.com',
-      pictogramStaticUrl: 'https://static.example.com',
+      pictogramApiUrl: 'https://api.teammapper.localhost',
+      pictogramStaticUrl: 'https://static.teammapper.localhost',
+      imprintUrl: null,
+      privacyUrl: null,
     },
-    featureFlags: { pictograms: true, ai: false, arrows: false },
+    featureFlags: { pictograms: true, ai: false, arrows: false, sharing: true },
   },
   userSettings: {
     general: { language: 'en', darkMode: false, displayName: '' },
@@ -54,6 +56,8 @@ describe('SettingsService', () => {
     jest.clearAllMocks()
     ;(configService.isAiEnabled as jest.Mock).mockReturnValue(false)
     ;(configService.isArrowsEnabled as jest.Mock).mockReturnValue(false)
+    ;(configService.getImprintUrl as jest.Mock).mockReturnValue(null)
+    ;(configService.getPrivacyUrl as jest.Mock).mockReturnValue(null)
     ;(configService.getLLMConfig as jest.Mock).mockReturnValue({
       provider: 'openai',
       model: 'gpt-test',
@@ -160,7 +164,12 @@ describe('SettingsService', () => {
         ...defaultSettings,
         systemSettings: {
           ...defaultSettings.systemSettings,
-          featureFlags: { pictograms: true, ai: true, arrows: false },
+          featureFlags: {
+            pictograms: true,
+            ai: true,
+            arrows: false,
+            sharing: true,
+          },
         },
       }
       mockedFs.readFileSync.mockReturnValue(JSON.stringify(settingsWithFlags))
@@ -172,7 +181,23 @@ describe('SettingsService', () => {
         pictograms: true,
         ai: false,
         arrows: false,
+        sharing: true,
       })
+    })
+
+    it('should turn the sharing flag off through the override file', () => {
+      const overrideSettings = {
+        systemSettings: { featureFlags: { sharing: false } },
+      }
+      mockedFs.existsSync.mockReturnValue(true)
+      mockedFs.statSync.mockReturnValue({ size: 100 } as fs.Stats)
+      mockedFs.readFileSync
+        .mockReturnValueOnce(JSON.stringify(defaultSettings))
+        .mockReturnValueOnce(JSON.stringify(overrideSettings))
+
+      const settings = service.getSettings()
+
+      expect(settings.systemSettings.featureFlags.sharing).toBe(false)
     })
 
     it('should turn the arrows flag on through the override file', () => {
@@ -204,6 +229,80 @@ describe('SettingsService', () => {
       const settings = service.getSettings()
 
       expect(settings.systemSettings.info.aiModel).toBe('gpt-test')
+    })
+  })
+
+  describe('legal urls', () => {
+    const imprintUrl = 'https://teammapper.localhost/imprint'
+    const privacyUrl = 'https://teammapper.localhost/privacy'
+
+    const withOverrideUrls = (urls: Record<string, string>): void => {
+      mockedFs.existsSync.mockReturnValue(true)
+      mockedFs.statSync.mockReturnValue({ size: 100 } as fs.Stats)
+      mockedFs.readFileSync
+        .mockReturnValueOnce(JSON.stringify(defaultSettings))
+        .mockReturnValueOnce(JSON.stringify({ systemSettings: { urls } }))
+    }
+
+    it('leaves both urls null without file values or variables', () => {
+      const { urls } = service.getSettings().systemSettings
+
+      expect(urls.imprintUrl).toBeNull()
+      expect(urls.privacyUrl).toBeNull()
+    })
+
+    it('reads both urls from the override file', () => {
+      withOverrideUrls({ imprintUrl, privacyUrl })
+
+      const { urls } = service.getSettings().systemSettings
+
+      expect(urls.imprintUrl).toBe(imprintUrl)
+      expect(urls.privacyUrl).toBe(privacyUrl)
+    })
+
+    it('lets IMPRINT_URL and PRIVACY_URL win over the override file', () => {
+      withOverrideUrls({ imprintUrl, privacyUrl })
+      ;(configService.getImprintUrl as jest.Mock).mockReturnValue(
+        'https://env.teammapper.localhost/imprint'
+      )
+      ;(configService.getPrivacyUrl as jest.Mock).mockReturnValue(
+        'https://env.teammapper.localhost/privacy'
+      )
+
+      const { urls } = service.getSettings().systemSettings
+
+      expect(urls.imprintUrl).toBe('https://env.teammapper.localhost/imprint')
+      expect(urls.privacyUrl).toBe('https://env.teammapper.localhost/privacy')
+    })
+
+    it('reads a blank url from the override file as null', () => {
+      withOverrideUrls({ imprintUrl: '  ', privacyUrl: '' })
+
+      const { urls } = service.getSettings().systemSettings
+
+      expect(urls.imprintUrl).toBeNull()
+      expect(urls.privacyUrl).toBeNull()
+    })
+
+    it('fills a url the settings files omit with null', () => {
+      const urlsWithoutImprint = {
+        pictogramApiUrl: 'https://api.teammapper.localhost',
+        pictogramStaticUrl: 'https://static.teammapper.localhost',
+        privacyUrl: null,
+      }
+      mockedFs.readFileSync.mockReturnValue(
+        JSON.stringify({
+          ...defaultSettings,
+          systemSettings: {
+            ...defaultSettings.systemSettings,
+            urls: urlsWithoutImprint,
+          },
+        })
+      )
+
+      const { urls } = service.getSettings().systemSettings
+
+      expect(urls.imprintUrl).toBeNull()
     })
   })
 })

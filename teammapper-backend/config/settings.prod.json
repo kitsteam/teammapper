@@ -6,12 +6,15 @@
     },
     "urls": {
       "pictogramApiUrl": "/arasaac/api/pictograms",
-      "pictogramStaticUrl": "/arasaac/images/pictograms"
+      "pictogramStaticUrl": "/arasaac/images/pictograms",
+      "imprintUrl": null,
+      "privacyUrl": null
     },
     "featureFlags": {
       "pictograms": true,
       "ai": false,
-      "arrows": false
+      "arrows": false,
+      "sharing": true
     }
   },
   "userSettings": {

@@ -211,6 +211,7 @@
       "MAP_LIST": "作成済みマップ一覧",
       "OWNED_MAPS": "マイマインドマップ",
       "LAST_MAPS": "最近開いたマインドマップ",
+      "OFFLINE_STORAGE_NOTICE": "マインドマップはこのブラウザ内にのみ保存されます。ブラウザのデータを消去すると、マインドマップも削除されます。バックアップには JSON エクスポートを使ってください。",
       "ROOT_NODE_NAME": "ルートノード名",
       "NODE_NAME": "ノード名",
       "TITLE": "設定",
@@ -234,6 +235,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "ファイルサイズが1MBを超えており、インポート時に問題が発生する可能性があります。画像を削除するなどしてファイルサイズを小さくしてください。"
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "TeamMapper の新しいバージョンの準備ができました。ここをクリックして再読み込みしてください。",
+    "APP_UPDATE_BROKEN": "TeamMapper を引き続き使うには再読み込みが必要です。ここをクリックして再読み込みしてください。",
     "SUCCESSFULLY_DUPLICATED": "マインドマップを複製しました！",
     "URL_COPIED": "URLをコピーしました！",
     "NODE_COPIED": "ノードをコピーしました！",
@@ -247,6 +250,7 @@
       "MAP_IMPORT_IN_PROGRESS": "マインドマップをインポート中...",
       "MAP_UPDATE_IN_PROGRESS": "マインドマップを更新中...",
       "MERMAID_SEVERAL_TREES": "各ツリーはそれぞれ独立した mindmap ブロックになりました。TeamMapper 以外の Mermaid ツールは一度に 1 つのブロックしか表示しません。",
+      "IMPORT_REPAIRED_NODES": "親ノードへの壊れたリンクを削除しました。",
       "ARROW_REFUSED": {
         "SELF": "矢印をノード自身に向けることはできません。",
         "DUPLICATE": "この 2 つのノードの間には、この向きの矢印がすでにあります。",
@@ -267,10 +271,15 @@
       "EXPORT_IMAGE_ERROR": "画像のエクスポート中にエラーが発生しました。マインドマップが大きすぎる可能性があります。",
       "MAP_COULD_NOT_BE_FOUND": "マインドマップが見つかりませんでした！",
       "IMPORT_ERROR": "マインドマップをインポートできませんでした",
+      "IMPORT_NEWER_VERSION": "このマインドマップファイルは新しいバージョンの TeamMapper で作成されました。インポートするには TeamMapper を更新してください。",
       "AI_MERMAID_ERROR": "Mermaidを生成できませんでした",
       "IMAGE_STORAGE_FULL": "このマインドマップの画像ストレージがいっぱいです。削除した画像の容量は、アップロードから7日以内に解放されます。",
       "IMAGE_UPLOAD_ERROR": "画像をアップロードできませんでした。",
-      "DELETE_MAP_ERROR": "マインドマップを削除できませんでした。"
+      "DELETE_MAP_ERROR": "マインドマップを削除できませんでした。",
+      "BROWSER_STORAGE_FAILED": "このブラウザのストレージにマインドマップを保存できませんでした。",
+      "BROWSER_STORAGE_NEWER_FORMAT": "このブラウザのマインドマップは新しいバージョンの TeamMapper で保存されたため、開くことができません。",
+      "BROWSER_STORAGE_UPDATED": "新しいバージョンの TeamMapper がこのブラウザのマインドマップを更新しました。このタブでは変更が保存されなくなります。編集を続けるにはページを再読み込みしてください。",
+      "BROWSER_STORAGE_UPDATE_FAILED": "マインドマップを現在のバージョンの TeamMapper に更新できませんでした。マインドマップは変更されていません。"
     },
     "DELETE_MAP_SUCCESS": "マインドマップを削除しました！",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaidを生成しました！",
@@ -281,6 +290,8 @@
   "GENERAL": {
     "BRANCHES": "ブランチ",
     "REPOSITORY": "ソースコード",
+    "IMPRINT": "運営者情報",
+    "PRIVACY": "プライバシー",
     "CREATE": "マインドマップを作成",
     "DISMISS": "閉じる",
     "SAVED_MAPS": "保存済みマップ",
@@ -305,6 +316,10 @@
     "SAVED": "保存済み",
     "NOT_SAVED": "未保存",
     "LINKS": "リンク"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "オフラインモード",
+    "DESCRIPTION": "マインドマップはこのブラウザ内にのみ保存されます。ほかの人は開くことも編集することもできず、変更はほかの人やデバイスとは同期されません。"
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "匿名"

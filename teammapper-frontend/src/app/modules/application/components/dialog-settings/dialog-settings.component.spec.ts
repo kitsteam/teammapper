@@ -13,7 +13,9 @@ import {
   AdditionalMapOptions,
   MmpService,
 } from 'src/app/core/services/mmp/mmp.service';
+import { OFFLINE_MODE } from 'src/app/core/services/map-backend/map-backend-config';
 import { MapSyncService } from 'src/app/core/services/map-sync/map-sync.service';
+import { MAP_STORE } from 'src/app/core/services/map-backend/map-store';
 import { SettingsService } from 'src/app/core/services/settings/settings.service';
 import { DialogSettingsComponent } from './dialog-settings.component';
 
@@ -96,10 +98,10 @@ describe('DialogSettingsComponent', () => {
           provide: MapSyncService,
           useValue: {
             updateMapOptions,
-            fetchUserMapsFromServer: async () => [],
             getAttachedMapObservable: () => new BehaviorSubject(null),
           },
         },
+        { provide: MAP_STORE, useValue: { listMaps: async () => [] } },
         {
           provide: SettingsService,
           useValue: {
@@ -115,6 +117,7 @@ describe('DialogSettingsComponent', () => {
           },
         },
         { provide: ToastrService, useValue: {} },
+        { provide: OFFLINE_MODE, useValue: false },
       ],
     }).compileComponents();
 

@@ -103,6 +103,31 @@ class ConfigService {
     return value?.toLowerCase() === 'true'
   }
 
+  /** Target of the imprint link; null when `IMPRINT_URL` is unset or blank. */
+  public getImprintUrl(): string | null {
+    return this.getValue('IMPRINT_URL', false)?.trim() || null
+  }
+
+  /** Target of the privacy link; null when `PRIVACY_URL` is unset or blank. */
+  public getPrivacyUrl(): string | null {
+    return this.getValue('PRIVACY_URL', false)?.trim() || null
+  }
+
+  /** Upstream the /arasaac/api proxy forwards pictogram searches to. */
+  public getPictogramApiUrl(): string {
+    return (
+      this.getValue('PICTOGRAM_API_URL', false) || 'https://api.arasaac.org/api'
+    )
+  }
+
+  /** Upstream the /arasaac/images proxy forwards pictogram images to. */
+  public getPictogramImagesUrl(): string {
+    return (
+      this.getValue('PICTOGRAM_IMAGES_URL', false) ||
+      'https://static.arasaac.org/'
+    )
+  }
+
   public getYjsMapLimits() {
     return {
       maxBytes: this.parsePositiveInt(

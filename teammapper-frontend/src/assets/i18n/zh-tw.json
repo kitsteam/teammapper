@@ -210,6 +210,7 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "我的心智圖",
       "LAST_MAPS": "最近開啟的心智圖",
+      "OFFLINE_STORAGE_NOTICE": "您的心智圖只儲存在此瀏覽器中。清除瀏覽器資料會刪除這些心智圖。請使用 JSON 匯出作為備份。",
       "ROOT_NODE_NAME": "根節點名稱",
       "NODE_NAME": "節點名稱",
       "TITLE": "設定",
@@ -232,6 +233,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "The file is exceeding 1 MB in file size and could cause problems during import. Please reduce the file size e.g. by removing images."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "TeamMapper 新版本已就緒。點擊此處重新載入。",
+    "APP_UPDATE_BROKEN": "TeamMapper 需要重新載入才能繼續使用。點擊此處重新載入。",
     "SUCCESSFULLY_DUPLICATED": "Mindmap successfully duplicated!",
     "URL_COPIED": "URL successfully copied!",
     "NODE_COPIED": "Node successfully copied!",
@@ -245,6 +248,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Map import in progress...",
       "MAP_UPDATE_IN_PROGRESS": "Updating mindmap...",
       "MERMAID_SEVERAL_TREES": "每棵樹都成為一個獨立的 mindmap 區塊。TeamMapper 以外的 Mermaid 工具一次只能呈現一個區塊。",
+      "IMPORT_REPAIRED_NODES": "已刪除指向父節點的損毀連結。",
       "ARROW_REFUSED": {
         "SELF": "箭頭不能從節點指向它自己。",
         "DUPLICATE": "這兩個節點之間已有一條同方向的箭頭。",
@@ -265,10 +269,15 @@
       "EXPORT_IMAGE_ERROR": "An error has occurred during image export. The mind map may be too large.",
       "MAP_COULD_NOT_BE_FOUND": "Mindmap could not be found!",
       "IMPORT_ERROR": "Mindmap could not be imported!",
+      "IMPORT_NEWER_VERSION": "此心智圖檔案由較新版本的 TeamMapper 建立。請更新 TeamMapper 後再匯入。",
       "AI_MERMAID_ERROR": "無法生成Mermaid",
       "IMAGE_STORAGE_FULL": "此心智圖的圖片儲存空間已滿。移除的圖片會在上傳後 7 天內釋放其空間。",
       "IMAGE_UPLOAD_ERROR": "無法上傳圖片。",
-      "DELETE_MAP_ERROR": "無法刪除心智圖。"
+      "DELETE_MAP_ERROR": "無法刪除心智圖。",
+      "BROWSER_STORAGE_FAILED": "無法將心智圖儲存到此瀏覽器的儲存空間。",
+      "BROWSER_STORAGE_NEWER_FORMAT": "此瀏覽器中的心智圖由較新版本的 TeamMapper 儲存，無法開啟。",
+      "BROWSER_STORAGE_UPDATED": "較新版本的 TeamMapper 已更新此瀏覽器中的心智圖。此分頁不再儲存變更。請重新載入頁面以繼續編輯。",
+      "BROWSER_STORAGE_UPDATE_FAILED": "無法將心智圖更新至目前版本的 TeamMapper，心智圖維持不變。"
     },
     "DELETE_MAP_SUCCESS": "心智圖已成功刪除！",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid生成成功！",
@@ -279,6 +288,8 @@
   "GENERAL": {
     "BRANCHES": "分支",
     "REPOSITORY": "Source Code",
+    "IMPRINT": "法律聲明",
+    "PRIVACY": "隱私",
     "CREATE": "Create mind map",
     "DISMISS": "解除",
     "SAVED_MAPS": "Saved maps",
@@ -305,6 +316,10 @@
     "FONT_MIN_SIZE": "Minimal font size",
     "FONT_MAX_SIZE": "Maximal font size",
     "FONT_INCREMENT": "Font size step"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "離線模式",
+    "DESCRIPTION": "您的心智圖只儲存在此瀏覽器中。其他人無法開啟或編輯它們，所做的變更也不會與其他人或裝置同步。"
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "匿名"

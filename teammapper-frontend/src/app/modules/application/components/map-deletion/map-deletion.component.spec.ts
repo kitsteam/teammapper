@@ -5,15 +5,14 @@ import { BehaviorSubject } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
 import { CachedMapEntry } from '@teammapper/shared';
 import { MapSyncService } from 'src/app/core/services/map-sync/map-sync.service';
+import { MAP_STORE } from 'src/app/core/services/map-backend/map-store';
 import { StorageService } from 'src/app/core/services/storage/storage.service';
 import { MapDeletionComponent } from './map-deletion.component';
 
 describe('MapDeletionComponent', () => {
   let fixture: ComponentFixture<MapDeletionComponent>;
-  let mapSyncService: {
-    getAttachedMapObservable: jest.Mock;
-    deleteMap: jest.Mock;
-  };
+  let mapSyncService: { getAttachedMapObservable: jest.Mock };
+  let mapStore: { deleteMap: jest.Mock };
   let storageService: { get: jest.Mock; remove: jest.Mock };
   let router: { navigate: jest.Mock };
   let toastrService: { error: jest.Mock };
@@ -34,8 +33,8 @@ describe('MapDeletionComponent', () => {
   ) {
     mapSyncService = {
       getAttachedMapObservable: jest.fn(() => new BehaviorSubject(map)),
-      deleteMap: jest.fn(async () => deleted),
     };
+    mapStore = { deleteMap: jest.fn(async () => deleted) };
     toastrService = { error: jest.fn() };
     storageService = {
       get: jest.fn(async () => storedMap),
@@ -47,6 +46,7 @@ describe('MapDeletionComponent', () => {
       imports: [MapDeletionComponent, TranslateModule.forRoot()],
       providers: [
         { provide: MapSyncService, useValue: mapSyncService },
+        { provide: MAP_STORE, useValue: mapStore },
         { provide: StorageService, useValue: storageService },
         { provide: Router, useValue: router },
         { provide: ToastrService, useValue: toastrService },
@@ -77,6 +77,29 @@ describe('MapDeletionComponent', () => {
     ).toContain('28.10.2026');
   });
 
+  it('shows no deletion text for a map without a deletion date', async () => {
+    await render(
+      {
+        key: 'map-1',
+        cachedMap: { uuid: 'map-1', deleteAfterDays: null, deletedAt: null },
+      } as CachedMapEntry,
+      null
+    );
+
+    expect(fixture.nativeElement.querySelector('.deleted-at')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('.delete-after-days')
+    ).toBeNull();
+  });
+
+  it('shows the delete after days text with a deletion date', async () => {
+    await render(attachedMap, null);
+
+    expect(
+      fixture.nativeElement.querySelector('.delete-after-days')
+    ).not.toBeNull();
+  });
+
   it('renders nothing while no map is attached', async () => {
     await render(null, null);
 
@@ -95,7 +118,7 @@ describe('MapDeletionComponent', () => {
 
     await fixture.componentInstance.deleteMap();
 
-    expect(mapSyncService.deleteMap).toHaveBeenCalledWith('map-1', 'admin-1');
+    expect(mapStore.deleteMap).toHaveBeenCalledWith('map-1', 'admin-1');
     expect(storageService.remove).toHaveBeenCalledWith('map-1');
     expect(router.navigate).toHaveBeenCalled();
   });
@@ -117,6 +140,6 @@ describe('MapDeletionComponent', () => {
 
     await fixture.componentInstance.deleteMap();
 
-    expect(mapSyncService.deleteMap).not.toHaveBeenCalled();
+    expect(mapStore.deleteMap).not.toHaveBeenCalled();
   });
 });

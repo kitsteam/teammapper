@@ -210,6 +210,7 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "Meus mapas mentais",
       "LAST_MAPS": "Mapas mentais recentes",
+      "OFFLINE_STORAGE_NOTICE": "Seus mapas mentais ficam apenas neste navegador. Limpar os dados do navegador os exclui. Use a exportação em JSON como backup.",
       "ROOT_NODE_NAME": "Nome do nó raiz",
       "NODE_NAME": "Nome do nó",
       "TITLE": "Configurações",
@@ -232,6 +233,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "The file is exceeding 1 MB in file size and could cause problems during import. Please reduce the file size e.g. by removing images."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "Uma nova versão do TeamMapper está pronta. Clique aqui para recarregar.",
+    "APP_UPDATE_BROKEN": "O TeamMapper precisa ser recarregado para continuar funcionando. Clique aqui para recarregar.",
     "SUCCESSFULLY_DUPLICATED": "Mindmap duplicado com sucesso!",
     "URL_COPIED": "URL copiado com sucesso",
     "NODE_COPIED": "Nó copiado com sucesso!",
@@ -245,6 +248,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Importação de mapa mental em andamento",
       "MAP_UPDATE_IN_PROGRESS": "Atualizando o mapa mental",
       "MERMAID_SEVERAL_TREES": "Cada árvore virou seu próprio bloco mindmap. Ferramentas Mermaid fora do TeamMapper exibem um bloco por vez.",
+      "IMPORT_REPAIRED_NODES": "Vínculos quebrados com nós pai removidos.",
       "ARROW_REFUSED": {
         "SELF": "Uma seta não pode apontar de um nó para ele mesmo.",
         "DUPLICATE": "Já existe uma seta entre estes dois nós nesta direção.",
@@ -265,10 +269,15 @@
       "EXPORT_IMAGE_ERROR": "Ocorreu um erro durante a exportação da imagem. O mapa mental pode ser muito grande.",
       "MAP_COULD_NOT_BE_FOUND": "Não foi possível encontrar o mapa mental!",
       "IMPORT_ERROR": "O mapa mental não pôde ser importado!",
+      "IMPORT_NEWER_VERSION": "Uma versão mais recente do TeamMapper criou este arquivo de mapa mental. Atualize o TeamMapper para importá-lo.",
       "AI_MERMAID_ERROR": "Mermaid não pôde ser gerado",
       "IMAGE_STORAGE_FULL": "O armazenamento de imagens deste mapa mental está cheio. Uma imagem removida libera seu espaço em até 7 dias após o envio.",
       "IMAGE_UPLOAD_ERROR": "Não foi possível enviar a imagem.",
-      "DELETE_MAP_ERROR": "Não foi possível excluir o mapa."
+      "DELETE_MAP_ERROR": "Não foi possível excluir o mapa.",
+      "BROWSER_STORAGE_FAILED": "Não foi possível salvar o mapa mental no armazenamento deste navegador.",
+      "BROWSER_STORAGE_NEWER_FORMAT": "Os mapas mentais deste navegador foram salvos por uma versão mais recente do TeamMapper e não podem ser abertos.",
+      "BROWSER_STORAGE_UPDATED": "Uma versão mais recente do TeamMapper atualizou os mapas mentais deste navegador. Esta aba não salva mais alterações. Recarregue a página para continuar editando.",
+      "BROWSER_STORAGE_UPDATE_FAILED": "Não foi possível atualizar o mapa mental para a versão atual do TeamMapper. Ele permanece inalterado."
     },
     "DELETE_MAP_SUCCESS": "Mapa mental excluído com sucesso!",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid gerado com sucesso!",
@@ -279,6 +288,8 @@
   "GENERAL": {
     "BRANCHES": "Ramos",
     "REPOSITORY": "Source Code",
+    "IMPRINT": "Aviso legal",
+    "PRIVACY": "Privacidade",
     "CREATE": "Create mind map",
     "DISMISS": "Dispensar",
     "SAVED_MAPS": "Saved maps",
@@ -305,6 +316,10 @@
     "FONT_MIN_SIZE": "Minimal font size",
     "FONT_MAX_SIZE": "Maximal font size",
     "FONT_INCREMENT": "Font size step"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "Modo offline",
+    "DESCRIPTION": "Seus mapas mentais ficam neste navegador. Ninguém mais pode abri-los ou editá-los, e as alterações não são sincronizadas com outras pessoas ou dispositivos."
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "Anônimo"

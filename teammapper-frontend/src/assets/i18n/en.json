@@ -211,6 +211,7 @@
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "My mindmaps",
       "LAST_MAPS": "Recently opened mindmaps",
+      "OFFLINE_STORAGE_NOTICE": "Your mindmaps stay in this browser only. Clearing the browser data deletes them. Use the JSON export as a backup.",
       "ROOT_NODE_NAME": "Root node name",
       "NODE_NAME": "Node name",
       "TITLE": "Settings",
@@ -234,6 +235,8 @@
     "JSON_FILE_SIZE_TOO_LARGE": "The file is exceeding 1 MB in file size and could cause problems during import. Please reduce the file size e.g. by removing images."
   },
   "TOASTS": {
+    "APP_UPDATE_READY": "A new version of TeamMapper is ready. Click here to reload.",
+    "APP_UPDATE_BROKEN": "TeamMapper needs a reload to keep working. Click here to reload.",
     "SUCCESSFULLY_DUPLICATED": "Mindmap successfully duplicated!",
     "URL_COPIED": "URL successfully copied!",
     "NODE_COPIED": "Node successfully copied!",
@@ -247,6 +250,7 @@
       "MAP_IMPORT_IN_PROGRESS": "Importing mindmap...",
       "MAP_UPDATE_IN_PROGRESS": "Updating mindmap...",
       "MERMAID_SEVERAL_TREES": "Each tree became its own mindmap block. Mermaid tools outside TeamMapper render one block at a time.",
+      "IMPORT_REPAIRED_NODES": "Removed broken links to parent nodes.",
       "ARROW_REFUSED": {
         "SELF": "An arrow cannot point from a node to itself.",
         "DUPLICATE": "An arrow between these two nodes in this direction exists already.",
@@ -267,10 +271,15 @@
       "EXPORT_IMAGE_ERROR": "An error has occurred during image export. The mind map may be too large.",
       "MAP_COULD_NOT_BE_FOUND": "Mindmap could not be found!",
       "IMPORT_ERROR": "Could not import mindmap",
+      "IMPORT_NEWER_VERSION": "A newer TeamMapper version created this mind map file. Update TeamMapper to import it.",
       "AI_MERMAID_ERROR": "Mermaid could not be generated",
       "IMAGE_STORAGE_FULL": "The image storage of this mind map is full. A removed image frees its space within 7 days of its upload.",
       "IMAGE_UPLOAD_ERROR": "The image could not be uploaded.",
-      "DELETE_MAP_ERROR": "The mind map could not be deleted."
+      "DELETE_MAP_ERROR": "The mind map could not be deleted.",
+      "BROWSER_STORAGE_FAILED": "The mind map could not be saved in this browser's storage.",
+      "BROWSER_STORAGE_NEWER_FORMAT": "The mind maps in this browser were saved by a newer version of TeamMapper and cannot be opened.",
+      "BROWSER_STORAGE_UPDATED": "A newer version of TeamMapper updated the mind maps in this browser. This tab saves no more changes. Reload the page to keep editing.",
+      "BROWSER_STORAGE_UPDATE_FAILED": "The mind map could not be updated to the current version of TeamMapper. It stays unchanged."
     },
     "DELETE_MAP_SUCCESS": "Mindmap successfully deleted!",
     "AI_MERMAID_GENERATED_SUCCESS": "Mermaid successfully generated!",
@@ -281,6 +290,8 @@
   "GENERAL": {
     "BRANCHES": "Branches",
     "REPOSITORY": "Source Code",
+    "IMPRINT": "Imprint",
+    "PRIVACY": "Privacy",
     "CREATE": "Create mind map",
     "DISMISS": "Dismiss",
     "SAVED_MAPS": "Saved maps",
@@ -305,6 +316,10 @@
     "SAVED": "Saved",
     "NOT_SAVED": "Not saved",
     "LINKS": "Links"
+  },
+  "OFFLINE_MODE": {
+    "LABEL": "Offline mode",
+    "DESCRIPTION": "Your mind maps stay in this browser. Nobody else can open or edit them, and changes do not sync with peers or devices."
   },
   "CLIENT_LIST": {
     "ANONYMOUS": "Anonymous"
