@@ -7,8 +7,8 @@
     "urls": {
       "pictogramApiUrl": "/arasaac/api/pictograms",
       "pictogramStaticUrl": "/arasaac/images/pictograms",
-      "imprintUrl": "https://kits.blog/impressum/",
-      "privacyUrl": "https://kits.blog/datenschutz/#teammapper"
+      "imprintUrl": null,
+      "privacyUrl": null
     },
     "featureFlags": {
       "pictograms": true,
