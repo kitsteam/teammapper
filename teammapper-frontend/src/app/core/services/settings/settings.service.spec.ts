@@ -98,6 +98,7 @@ describe('SettingsService', () => {
       modificationSecret: '456',
       adminId: '123',
       rootName: 'test',
+      createdAt: new Date(),
     };
     const expiring: CachedAdminMapValue = {
       ...neverExpires,
