@@ -65,8 +65,10 @@ Copy `.env.default` to `.env` and configure the variables below.
 | Variable | Description | Default |
 |---|---|---|
 | `PORT` | Server port | `3000` |
-| `MODE` | `DEV` disables SSL | `DEV` |
+| `MODE` | Sets the default log level: `debug` with `DEV`, `log` with any other value | unset |
 | `DELETE_AFTER_DAYS` | Days before unused maps are deleted | `30` |
+
+The [README](../README.md#system-settings) lists the variables for feature flags, legal links and pictograms.
 
 ### PostgreSQL (optional)
 
@@ -103,7 +105,7 @@ Copy `.env.default` to `.env` and configure the variables below.
 | `UPLOAD_IMAGE_RATE_LIMIT` | Maximum image uploads per client IP within the rate window | `30` |
 | `UPLOAD_IMAGE_RATE_WINDOW_MS` | Window of the image upload rate limit in ms | `60000` |
 
-Map duplication allows 5 requests per minute per backend process and one active duplication across instances. Configure the shared rate with `DUPLICATE_MAP_RATE_LIMIT` and `DUPLICATE_MAP_RATE_WINDOW_MS`; `DUPLICATE_MAP_MAX_IMAGE_BYTES` sets its total image storage budget (default 1 GB).
+Map duplication allows 5 requests per minute per backend process and one active duplication across instances. Configure the shared rate with `DUPLICATE_MAP_RATE_LIMIT` and `DUPLICATE_MAP_RATE_WINDOW_MS`. The server answers 413 when the images of a map, inline images included, exceed `MAX_IMAGE_BYTES_PER_MAP`, and duplicates nothing.
 
 ### AI / LLM Integration
 

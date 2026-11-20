@@ -218,6 +218,9 @@ defaults for new maps and nodes:
 - the branch style
 - the starting name and styling of root nodes and ordinary nodes
 
+The server sends the starting values of the user settings from a settings
+file. The operator can replace that file with a complete one of their own.
+
 ### Info dialog
 
 The dialog opened by the info button or `?`. It shows the app version, legal
@@ -227,9 +230,17 @@ settings. Map shortcuts are inactive while the dialog is open.
 ### Legal links
 
 Links to the instance's imprint and privacy information, shown in the info
-dialog and the start page footer. The operator sets their addresses with
-`imprintUrl` and `privacyUrl` in system settings, or the environment variables
-`IMPRINT_URL` and `PRIVACY_URL`. Each link appears only when configured.
+dialog and the start page footer. The operator sets their addresses with the
+environment variables `IMPRINT_URL` and `PRIVACY_URL`. Each link appears only
+when configured.
+
+### System settings
+
+The settings the server sends to every client: feature flags, the legal links,
+the pictogram addresses and the app version. They start from defaults built
+into TeamMapper, and the operator changes them with environment variables
+only. Users cannot change them. The offline build starts from the same
+defaults.
 
 ### Settings dialog
 
@@ -373,13 +384,6 @@ Write "duplicate", never "clone" or "fork".
 The maximum image storage allowed for one map through uploads or duplication.
 Existing inline images and the image extraction job can exceed this limit.
 
-### Duplication storage budget
-
-The storage limit across all maps that controls whether duplication may add
-image data. It counts the stored bytes of referenced images and the UTF-8
-bytes of inline image data URLs. Copies of copies count toward the same
-budget. See **Image cap** for the limit on a single map.
-
 ### Offline build
 
 A static frontend that runs without a backend. Maps stay in this browser's
@@ -451,6 +455,21 @@ updates travel separately from map content, so losing them does not lose edits.
 
 Whether this client can reach the server. A lost connection opens the
 "Connection lost" dialog, which offers a reconnect button.
+
+### Map size limit
+
+The most data one mind map may hold on the server. A map at the limit accepts
+no change that makes it larger. The operator sets the limit.
+
+### Rejected change
+
+A change the server refuses to store, such as one that would exceed the map
+size limit. The client that sent it turns read-only and shows a message until
+the page reloads.
+
+When the map content fails validation, the server also discards the live map
+and reloads its last saved state. That reload is a **map reset**. The other
+clients of the map reconnect and show a message that explains the reset.
 
 ## Words for code
 

@@ -136,8 +136,7 @@
       "LINK_TYPE_EDIT": "Observe and modify"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "Atalhos",
-      "DELETION_MOVED": "Observação: a data de exclusão deste mapa agora está nas configurações, em Opções de mapa. Quem criou o mapa também pode excluí-lo lá."
+      "SHORTCUTS_TITLE": "Atalhos"
     },
     "LINK": {
       "URL": "Link URL (https://...)"
@@ -195,8 +194,13 @@
       },
       "CENTER_ON_RESIZING": "Centralizar no redimensionamento",
       "EDITOR": "Editor",
+      "APPEARANCE": "Aparência",
+      "PROFILE": "Perfil",
+      "NEW_NODES": "Novos nós",
+      "SEARCH": "Pesquisar configurações",
+      "SEARCH_CLEAR": "Limpar pesquisa",
+      "SEARCH_NO_RESULTS": "Nenhuma configuração corresponde à pesquisa.",
       "FONT_SIZES": "Tamanhos de fonte",
-      "MIND_MAP": "Mapa mental",
       "MAP_SETTINGS": "Configurações do mapa",
       "MAP_SETTINGS_EXPLANATION": "Compartilhadas com todos neste mapa",
       "NODE_NAMES_HINT": "Usado como nome dos mapas e nós que você cria. O nome fica salvo no nó, então todos neste mapa o veem.",
@@ -205,8 +209,6 @@
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
-      "GENERAL": "Geral",
-      "MAIN": "Principal",
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "Meus mapas mentais",
       "LAST_MAPS": "Mapas mentais recentes",
@@ -240,6 +242,9 @@
     "NODE_COPIED": "Nó copiado com sucesso!",
     "NODE_CUT": "Nó cortado com sucesso!",
     "MAP_IMPORT_SUCCESS": "Mapa mental importado com sucesso",
+    "MAP_TOO_LARGE": "Este mapa mental atingiu o limite de tamanho, então o servidor não salvou sua última alteração. O mapa mental fica somente leitura até você recarregar a página.",
+    "MAP_UPDATE_REJECTED": "O servidor rejeitou sua última alteração. O mapa mental fica somente leitura até você recarregar a página.",
+    "MAP_RESET": "O servidor rejeitou uma alteração neste mapa mental e recarregou o último estado salvo.",
     "MAP_SYNCING": "Carregando o mapa mental…",
     "INVALID_MODIFICATION_SECRET": "O link de edição é inválido. O mapa mental abre somente para leitura.",
     "MAP_UPDATE_SUCCESS": "Mindmap atualizado com sucesso",
@@ -271,6 +276,7 @@
       "IMPORT_ERROR": "O mapa mental não pôde ser importado!",
       "IMPORT_NEWER_VERSION": "Uma versão mais recente do TeamMapper criou este arquivo de mapa mental. Atualize o TeamMapper para importá-lo.",
       "AI_MERMAID_ERROR": "Mermaid não pôde ser gerado",
+      "PICTOGRAMS_ERROR": "Não foi possível carregar os pictogramas. Tente novamente mais tarde.",
       "IMAGE_STORAGE_FULL": "O armazenamento de imagens deste mapa mental está cheio. Uma imagem removida libera seu espaço em até 7 dias após o envio.",
       "IMAGE_UPLOAD_ERROR": "Não foi possível enviar a imagem.",
       "DELETE_MAP_ERROR": "Não foi possível excluir o mapa.",

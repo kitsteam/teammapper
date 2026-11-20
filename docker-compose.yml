@@ -34,6 +34,9 @@ services:
       AI_LLM_TIMEOUT_MS: ${DOCKER_COMPOSE_APP_ENV_AI_LLM_API_TIMEOUT_MS}
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
+      # Dev and the e2e suite read settings.default.json, which the tests
+      # expect, instead of the kits settings.override.json.
+      IGNORE_SETTINGS_OVERRIDE: ${IGNORE_SETTINGS_OVERRIDE:-true}
 
       TESTING_PLAYWRIGHT_WS_ENDPOINT: "ws://playwright:9323"
       # Chromium's HSTS preload list covers the .app top-level domain and

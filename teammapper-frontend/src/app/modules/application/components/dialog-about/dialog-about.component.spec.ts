@@ -29,4 +29,13 @@ describe('DialogAboutComponent', () => {
       'https://kits.blog/datenschutz/#teammapper',
     ]);
   });
+
+  it('shows no hint that the deletion moved to the settings', () => {
+    const fixture = TestBed.createComponent(DialogAboutComponent);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'DELETION_MOVED'
+    );
+  });
 });
