@@ -137,8 +137,7 @@
       "LINK_TYPE_EDIT": "Änderungen erlauben"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "Shortcuts",
-      "DELETION_MOVED": "Hinweis: Das Löschdatum dieser Mindmap steht jetzt in den Einstellungen unter Mindmap Optionen. Wer die Mindmap erstellt hat, kann sie dort auch löschen."
+      "SHORTCUTS_TITLE": "Shortcuts"
     },
     "LINK": {
       "URL": "Link-URL (https://...)"
@@ -196,8 +195,13 @@
       },
       "CENTER_ON_RESIZING": "Zentrieren bei Größenänderung",
       "EDITOR": "Editor",
+      "APPEARANCE": "Darstellung",
+      "PROFILE": "Profil",
+      "NEW_NODES": "Neue Knoten",
+      "SEARCH": "Einstellungen durchsuchen",
+      "SEARCH_CLEAR": "Suche leeren",
+      "SEARCH_NO_RESULTS": "Keine Einstellung passt zur Suche.",
       "FONT_SIZES": "Schriftgrößen",
-      "MIND_MAP": "Mindmap",
       "MAP_SETTINGS": "Mindmap-Einstellungen",
       "MAP_SETTINGS_EXPLANATION": "Gelten für alle auf dieser Mindmap",
       "NODE_NAMES_HINT": "Name der Mindmaps und Knoten, die du erstellst. Der Name wird am Knoten gespeichert, daher sehen ihn alle auf dieser Mindmap.",
@@ -206,8 +210,6 @@
       "FONT_INCREMENT": "Schrittgröße bei Einstellung Schriftgröße",
       "FONT_MAX_SIZE": "Maximale Schriftgröße",
       "FONT_MIN_SIZE": "Minimale Schriftgröße",
-      "GENERAL": "Allgemein",
-      "MAIN": "Grundeinstellungen",
       "MAP_LIST": "Liste erstellter Mindmaps",
       "OWNED_MAPS": "Meine Mindmaps",
       "LAST_MAPS": "Zuletzt geöffnete Mindmaps",
@@ -243,6 +245,9 @@
     "NODE_COPIED": "Knoten erfolgreich kopiert!",
     "NODE_CUT": "Knoten erfolgreich ausgeschnitten!",
     "MAP_IMPORT_SUCCESS": "Mindmap erfolgreich importiert!",
+    "MAP_TOO_LARGE": "Diese Mindmap hat ihre Größenbeschränkung erreicht, daher hat der Server Ihre letzte Änderung nicht gespeichert. Die Mindmap ist schreibgeschützt, bis Sie die Seite neu laden.",
+    "MAP_UPDATE_REJECTED": "Der Server hat Ihre letzte Änderung abgelehnt. Die Mindmap ist schreibgeschützt, bis Sie die Seite neu laden.",
+    "MAP_RESET": "Der Server hat eine Änderung an dieser Mindmap abgelehnt und ihren zuletzt gespeicherten Stand neu geladen.",
     "MAP_SYNCING": "Die Mindmap wird geladen…",
     "INVALID_MODIFICATION_SECRET": "Der Bearbeitungslink ist ungültig. Die Mindmap öffnet schreibgeschützt.",
     "MAP_UPDATE_SUCCESS": "Mindmap erfolgreich aktualisiert!",
@@ -274,6 +279,7 @@
       "IMPORT_ERROR": "Mindmap konnte nicht importiert werden!",
       "IMPORT_NEWER_VERSION": "Eine neuere TeamMapper-Version hat diese Mindmap-Datei erstellt. Aktualisiere TeamMapper, um sie zu importieren.",
       "AI_MERMAID_ERROR": "Mermaid konnte nicht generiert werden.",
+      "PICTOGRAMS_ERROR": "Die Piktogramme konnten nicht geladen werden. Bitte versuche es später erneut.",
       "IMAGE_STORAGE_FULL": "Der Bildspeicher dieser Mindmap ist voll. Ein entferntes Bild gibt seinen Platz innerhalb von 7 Tagen nach dem Hochladen frei.",
       "IMAGE_UPLOAD_ERROR": "Das Bild konnte nicht hochgeladen werden.",
       "DELETE_MAP_ERROR": "Die Mindmap konnte nicht gelöscht werden.",

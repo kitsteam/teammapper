@@ -136,8 +136,7 @@
       "LINK_TYPE_EDIT": "查看并修改"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "快捷键",
-      "DELETION_MOVED": "提示：此思维导图的删除日期已移至设置中的“思维导图选项”。思维导图的创建者也可以在那里删除它。"
+      "SHORTCUTS_TITLE": "快捷键"
     },
     "LINK": {
       "URL": "链接 URL (https://...)"
@@ -195,8 +194,13 @@
       },
       "CENTER_ON_RESIZING": "缩放之后居中",
       "EDITOR": "编辑器",
+      "APPEARANCE": "外观",
+      "PROFILE": "个人资料",
+      "NEW_NODES": "新节点",
+      "SEARCH": "搜索设置",
+      "SEARCH_CLEAR": "清除搜索",
+      "SEARCH_NO_RESULTS": "没有与搜索匹配的设置。",
       "FONT_SIZES": "字体大小",
-      "MIND_MAP": "思维导图",
       "MAP_SETTINGS": "思维导图设置",
       "MAP_SETTINGS_EXPLANATION": "与此思维导图上的所有人共享",
       "NODE_NAMES_HINT": "用作你创建的思维导图和节点的名称。名称保存在节点上，因此此思维导图上的每个人都能看到。",
@@ -205,8 +209,6 @@
       "FONT_MIN_SIZE": "最小字体大小",
       "FONT_MAX_SIZE": "最大字体大小",
       "FONT_INCREMENT": "字体大小步长",
-      "GENERAL": "一般",
-      "MAIN": "主界面",
       "MAP_LIST": "已创建思维导图列表",
       "OWNED_MAPS": "我的思维导图",
       "LAST_MAPS": "最近打开的思维导图",
@@ -240,6 +242,9 @@
     "NODE_COPIED": "节点复制成功",
     "NODE_CUT": "节点成功切断",
     "MAP_IMPORT_SUCCESS": "成功导入思维导图",
+    "MAP_TOO_LARGE": "此思维导图已达到大小上限，因此服务器未保存您的最后一次更改。在您重新加载页面之前，思维导图为只读。",
+    "MAP_UPDATE_REJECTED": "服务器拒绝了您的最后一次更改。在您重新加载页面之前，思维导图为只读。",
+    "MAP_RESET": "服务器拒绝了对此思维导图的一项更改，并重新加载了其最后保存的状态。",
     "MAP_SYNCING": "正在加载思维导图…",
     "INVALID_MODIFICATION_SECRET": "编辑链接无效。思维导图将以只读方式打开。",
     "MAP_UPDATE_SUCCESS": "思维导图更新成功",
@@ -271,6 +276,7 @@
       "IMPORT_ERROR": "无法导入思维导图！",
       "IMPORT_NEWER_VERSION": "此思维导图文件由更新版本的 TeamMapper 创建。请更新 TeamMapper 后再导入。",
       "AI_MERMAID_ERROR": "无法生成Mermaid",
+      "PICTOGRAMS_ERROR": "无法加载象形图。请稍后再试。",
       "IMAGE_STORAGE_FULL": "此思维导图的图片存储空间已满。移除的图片会在上传后 7 天内释放其空间。",
       "IMAGE_UPLOAD_ERROR": "无法上传图片。",
       "DELETE_MAP_ERROR": "无法删除思维导图。",

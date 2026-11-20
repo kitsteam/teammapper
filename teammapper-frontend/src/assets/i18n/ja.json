@@ -137,8 +137,7 @@
       "LINK_TYPE_EDIT": "閲覧と編集"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "ショートカット",
-      "DELETION_MOVED": "注：このマインドマップの削除予定日は、設定の「マップオプション」に移動しました。マインドマップの作成者は、そこで削除することもできます。"
+      "SHORTCUTS_TITLE": "ショートカット"
     },
     "LINK": {
       "URL": "リンクURL（https://...）"
@@ -196,8 +195,13 @@
       },
       "CENTER_ON_RESIZING": "リサイズ時に中央表示",
       "EDITOR": "エディター",
+      "APPEARANCE": "表示",
+      "PROFILE": "プロフィール",
+      "NEW_NODES": "新しいノード",
+      "SEARCH": "設定を検索",
+      "SEARCH_CLEAR": "検索をクリア",
+      "SEARCH_NO_RESULTS": "検索に一致する設定はありません。",
       "FONT_SIZES": "フォントサイズ",
-      "MIND_MAP": "マインドマップ",
       "MAP_SETTINGS": "マップ設定",
       "MAP_SETTINGS_EXPLANATION": "このマップの全員と共有されます",
       "NODE_NAMES_HINT": "作成したマップとノードの名前に使われます。名前はノードに保存されるため、このマップの全員に表示されます。",
@@ -206,8 +210,6 @@
       "FONT_MIN_SIZE": "最小フォントサイズ",
       "FONT_MAX_SIZE": "最大フォントサイズ",
       "FONT_INCREMENT": "フォントサイズの増減幅",
-      "GENERAL": "一般",
-      "MAIN": "メイン",
       "MAP_LIST": "作成済みマップ一覧",
       "OWNED_MAPS": "マイマインドマップ",
       "LAST_MAPS": "最近開いたマインドマップ",
@@ -242,6 +244,9 @@
     "NODE_COPIED": "ノードをコピーしました！",
     "NODE_CUT": "ノードを切り取りました！",
     "MAP_IMPORT_SUCCESS": "マインドマップをインポートしました！",
+    "MAP_TOO_LARGE": "このマインドマップはサイズ上限に達したため、サーバーは最後の変更を保存しませんでした。ページを再読み込みするまで、マインドマップは読み取り専用です。",
+    "MAP_UPDATE_REJECTED": "サーバーが最後の変更を拒否しました。ページを再読み込みするまで、マインドマップは読み取り専用です。",
+    "MAP_RESET": "サーバーがこのマインドマップへの変更を拒否し、最後に保存した状態を再読み込みしました。",
     "MAP_SYNCING": "マインドマップを読み込んでいます…",
     "INVALID_MODIFICATION_SECRET": "編集リンクが無効です。マインドマップは読み取り専用で開きます。",
     "MAP_UPDATE_SUCCESS": "マインドマップを更新しました！",
@@ -273,6 +278,7 @@
       "IMPORT_ERROR": "マインドマップをインポートできませんでした",
       "IMPORT_NEWER_VERSION": "このマインドマップファイルは新しいバージョンの TeamMapper で作成されました。インポートするには TeamMapper を更新してください。",
       "AI_MERMAID_ERROR": "Mermaidを生成できませんでした",
+      "PICTOGRAMS_ERROR": "ピクトグラムを読み込めませんでした。しばらくしてからもう一度お試しください。",
       "IMAGE_STORAGE_FULL": "このマインドマップの画像ストレージがいっぱいです。削除した画像の容量は、アップロードから7日以内に解放されます。",
       "IMAGE_UPLOAD_ERROR": "画像をアップロードできませんでした。",
       "DELETE_MAP_ERROR": "マインドマップを削除できませんでした。",

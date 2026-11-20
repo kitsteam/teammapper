@@ -136,8 +136,7 @@
       "LINK_TYPE_EDIT": "Osservare e modificare"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "Scorciatoie da tastiera",
-      "DELETION_MOVED": "Nota: la data di eliminazione di questa mappa mentale si trova ora nelle impostazioni, in Opzioni mappa. Chi ha creato la mappa può anche eliminarla da lì."
+      "SHORTCUTS_TITLE": "Scorciatoie da tastiera"
     },
     "LINK": {
       "URL": "Link URL (https://...)"
@@ -195,8 +194,13 @@
       },
       "CENTER_ON_RESIZING": "Centra al ridimensionamento",
       "EDITOR": "Editor",
+      "APPEARANCE": "Aspetto",
+      "PROFILE": "Profilo",
+      "NEW_NODES": "Nuovi nodi",
+      "SEARCH": "Cerca nelle impostazioni",
+      "SEARCH_CLEAR": "Cancella ricerca",
+      "SEARCH_NO_RESULTS": "Nessuna impostazione corrisponde alla ricerca.",
       "FONT_SIZES": "Dimensioni del carattere",
-      "MIND_MAP": "Mappa mentale",
       "MAP_SETTINGS": "Impostazioni della mappa",
       "MAP_SETTINGS_EXPLANATION": "Condivise con tutti su questa mappa",
       "NODE_NAMES_HINT": "Usato come nome delle mappe e dei nodi che crei. Il nome viene salvato nel nodo, quindi tutti su questa mappa lo vedono.",
@@ -205,8 +209,6 @@
       "FONT_MIN_SIZE": "Dimensione minima del font",
       "FONT_MAX_SIZE": "Dimensione massima del font",
       "FONT_INCREMENT": "Passo dimensione del font",
-      "GENERAL": "Generali",
-      "MAIN": "Principali",
       "MAP_LIST": "Elenco delle mappe create",
       "OWNED_MAPS": "Le mie mappe mentali",
       "LAST_MAPS": "Mappe mentali recenti",
@@ -240,6 +242,9 @@
     "NODE_COPIED": "Nodo copiato con successo!",
     "NODE_CUT": "Nodo tagliato con successo!",
     "MAP_IMPORT_SUCCESS": "Mappa mentale importata con successo",
+    "MAP_TOO_LARGE": "Questa mappa mentale ha raggiunto il limite di dimensione, quindi il server non ha salvato la tua ultima modifica. La mappa mentale è in sola lettura finché non ricarichi la pagina.",
+    "MAP_UPDATE_REJECTED": "Il server ha rifiutato la tua ultima modifica. La mappa mentale è in sola lettura finché non ricarichi la pagina.",
+    "MAP_RESET": "Il server ha rifiutato una modifica a questa mappa mentale e ha ricaricato il suo ultimo stato salvato.",
     "MAP_SYNCING": "Caricamento della mappa mentale…",
     "INVALID_MODIFICATION_SECRET": "Il link di modifica non è valido. La mappa mentale si apre in sola lettura.",
     "MAP_UPDATE_SUCCESS": "Mappa mentale aggiornata con successo!",
@@ -271,6 +276,7 @@
       "IMPORT_ERROR": "Non è stato possibile importare la mappa mentale!",
       "IMPORT_NEWER_VERSION": "Una versione più recente di TeamMapper ha creato questo file di mappa mentale. Aggiorna TeamMapper per importarlo.",
       "AI_MERMAID_ERROR": "Mermaid non può essere generato",
+      "PICTOGRAMS_ERROR": "Non è stato possibile caricare i pittogrammi. Riprova più tardi.",
       "IMAGE_STORAGE_FULL": "Lo spazio per le immagini di questa mappa mentale è pieno. Un'immagine rimossa libera il suo spazio entro 7 giorni dal caricamento.",
       "IMAGE_UPLOAD_ERROR": "Non è stato possibile caricare l'immagine.",
       "DELETE_MAP_ERROR": "Non è stato possibile eliminare la mappa mentale.",

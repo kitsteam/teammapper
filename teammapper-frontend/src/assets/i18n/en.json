@@ -137,8 +137,7 @@
       "LINK_TYPE_EDIT": "Observe and modify"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "Keyboard shortcuts",
-      "DELETION_MOVED": "Hint: The deletion date of this mind map is now in the settings under Map options. If you created the mind map, you can also delete it there."
+      "SHORTCUTS_TITLE": "Keyboard shortcuts"
     },
     "LINK": {
       "URL": "Link URL (https://...)"
@@ -196,8 +195,13 @@
       },
       "CENTER_ON_RESIZING": "Center on resizing",
       "EDITOR": "Editor",
+      "APPEARANCE": "Appearance",
+      "PROFILE": "Profile",
+      "NEW_NODES": "New nodes",
+      "SEARCH": "Search settings",
+      "SEARCH_CLEAR": "Clear search",
+      "SEARCH_NO_RESULTS": "No setting matches your search.",
       "FONT_SIZES": "Font sizes",
-      "MIND_MAP": "Mind map",
       "MAP_SETTINGS": "Map settings",
       "MAP_SETTINGS_EXPLANATION": "Shared with everyone on this map",
       "NODE_NAMES_HINT": "Used as the name of maps and nodes you create. The name is saved on the node, so everyone on this map sees it.",
@@ -206,8 +210,6 @@
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
-      "GENERAL": "General",
-      "MAIN": "Main",
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "My mindmaps",
       "LAST_MAPS": "Recently opened mindmaps",
@@ -242,6 +244,9 @@
     "NODE_COPIED": "Node successfully copied!",
     "NODE_CUT": "Node successfully cut!",
     "MAP_IMPORT_SUCCESS": "Mindmap successfully imported!",
+    "MAP_TOO_LARGE": "This mind map has reached its size limit, so the server did not save your last change. The mind map is read-only until you reload the page.",
+    "MAP_UPDATE_REJECTED": "The server rejected your last change. The mind map is read-only until you reload the page.",
+    "MAP_RESET": "The server rejected a change to this mind map and reloaded its last saved state.",
     "MAP_SYNCING": "Loading the mind map…",
     "INVALID_MODIFICATION_SECRET": "The edit link is invalid. The mind map opens read-only.",
     "MAP_UPDATE_SUCCESS": "Mindmap successfully updated!",
@@ -273,6 +278,7 @@
       "IMPORT_ERROR": "Could not import mindmap",
       "IMPORT_NEWER_VERSION": "A newer TeamMapper version created this mind map file. Update TeamMapper to import it.",
       "AI_MERMAID_ERROR": "Mermaid could not be generated",
+      "PICTOGRAMS_ERROR": "Pictograms could not be loaded. Please try again later.",
       "IMAGE_STORAGE_FULL": "The image storage of this mind map is full. A removed image frees its space within 7 days of its upload.",
       "IMAGE_UPLOAD_ERROR": "The image could not be uploaded.",
       "DELETE_MAP_ERROR": "The mind map could not be deleted.",

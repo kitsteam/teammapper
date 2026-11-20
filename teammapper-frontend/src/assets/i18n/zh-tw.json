@@ -136,8 +136,7 @@
       "LINK_TYPE_EDIT": "Observe and modify"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "快捷鍵",
-      "DELETION_MOVED": "提示：此心智圖的刪除日期已移至設定中的「地圖選項」。心智圖的建立者也可以在那裡刪除它。"
+      "SHORTCUTS_TITLE": "快捷鍵"
     },
     "LINK": {
       "URL": "Link URL (https://...)"
@@ -195,8 +194,13 @@
       },
       "CENTER_ON_RESIZING": "視窗縮放後置中",
       "EDITOR": "編輯器",
+      "APPEARANCE": "外觀",
+      "PROFILE": "個人資料",
+      "NEW_NODES": "新節點",
+      "SEARCH": "搜尋設定",
+      "SEARCH_CLEAR": "清除搜尋",
+      "SEARCH_NO_RESULTS": "沒有符合搜尋的設定。",
       "FONT_SIZES": "字型大小",
-      "MIND_MAP": "心智圖",
       "MAP_SETTINGS": "地圖設定",
       "MAP_SETTINGS_EXPLANATION": "與此地圖上的所有人共享",
       "NODE_NAMES_HINT": "用作你建立的地圖和節點的名稱。名稱儲存在節點上，因此此地圖上的每個人都看得到。",
@@ -205,8 +209,6 @@
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
-      "GENERAL": "一般",
-      "MAIN": "主畫面",
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "我的心智圖",
       "LAST_MAPS": "最近開啟的心智圖",
@@ -240,6 +242,9 @@
     "NODE_COPIED": "Node successfully copied!",
     "NODE_CUT": "Node successfully cut!",
     "MAP_IMPORT_SUCCESS": "Map successfully imported!",
+    "MAP_TOO_LARGE": "此心智圖已達到大小上限，因此伺服器未儲存您的最後一次變更。在您重新載入頁面之前，心智圖為唯讀。",
+    "MAP_UPDATE_REJECTED": "伺服器拒絕了您的最後一次變更。在您重新載入頁面之前，心智圖為唯讀。",
+    "MAP_RESET": "伺服器拒絕了對此心智圖的一項變更，並重新載入了其最後儲存的狀態。",
     "MAP_SYNCING": "正在載入心智圖…",
     "INVALID_MODIFICATION_SECRET": "編輯連結無效。心智圖將以唯讀方式開啟。",
     "MAP_UPDATE_SUCCESS": "Mindmap successfully updated!",
@@ -271,6 +276,7 @@
       "IMPORT_ERROR": "Mindmap could not be imported!",
       "IMPORT_NEWER_VERSION": "此心智圖檔案由較新版本的 TeamMapper 建立。請更新 TeamMapper 後再匯入。",
       "AI_MERMAID_ERROR": "無法生成Mermaid",
+      "PICTOGRAMS_ERROR": "無法載入象形圖。請稍後再試。",
       "IMAGE_STORAGE_FULL": "此心智圖的圖片儲存空間已滿。移除的圖片會在上傳後 7 天內釋放其空間。",
       "IMAGE_UPLOAD_ERROR": "無法上傳圖片。",
       "DELETE_MAP_ERROR": "無法刪除心智圖。",

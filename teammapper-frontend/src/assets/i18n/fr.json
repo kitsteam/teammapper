@@ -136,8 +136,7 @@
       "LINK_TYPE_EDIT": "Observe and modify"
     },
     "INFO": {
-      "SHORTCUTS_TITLE": "Raccourcis",
-      "DELETION_MOVED": "Remarque : la date de suppression de cette carte se trouve désormais dans les paramètres, sous Options de carte. La personne qui a créé la carte peut aussi la supprimer à cet endroit."
+      "SHORTCUTS_TITLE": "Raccourcis"
     },
     "LINK": {
       "URL": "Link URL (https://...)"
@@ -195,8 +194,13 @@
       },
       "CENTER_ON_RESIZING": "Centrer sur le redimensionnement",
       "EDITOR": "Éditeur",
+      "APPEARANCE": "Apparence",
+      "PROFILE": "Profil",
+      "NEW_NODES": "Nouveaux nœuds",
+      "SEARCH": "Rechercher dans les paramètres",
+      "SEARCH_CLEAR": "Effacer la recherche",
+      "SEARCH_NO_RESULTS": "Aucun paramètre ne correspond à la recherche.",
       "FONT_SIZES": "Tailles de police",
-      "MIND_MAP": "Carte mentale",
       "MAP_SETTINGS": "Paramètres de la carte",
       "MAP_SETTINGS_EXPLANATION": "Partagés avec tout le monde sur cette carte",
       "NODE_NAMES_HINT": "Nom des cartes et des noeuds que vous créez. Le nom est enregistré sur le noeud, donc tout le monde sur cette carte le voit.",
@@ -205,8 +209,6 @@
       "FONT_MIN_SIZE": "Minimal font size",
       "FONT_MAX_SIZE": "Maximal font size",
       "FONT_INCREMENT": "Font size step",
-      "GENERAL": "Général",
-      "MAIN": "Principale",
       "MAP_LIST": "List of created maps",
       "OWNED_MAPS": "Mes cartes mentales",
       "LAST_MAPS": "Cartes mentales récentes",
@@ -240,6 +242,9 @@
     "NODE_COPIED": "Nœud copié avec succès !",
     "NODE_CUT": "Nœud coupé avec succès !",
     "MAP_IMPORT_SUCCESS": "Mindmap importée avec succès !",
+    "MAP_TOO_LARGE": "Cette mindmap a atteint sa limite de taille, le serveur n'a donc pas enregistré votre dernière modification. La mindmap est en lecture seule jusqu'à ce que vous rechargiez la page.",
+    "MAP_UPDATE_REJECTED": "Le serveur a rejeté votre dernière modification. La mindmap est en lecture seule jusqu'à ce que vous rechargiez la page.",
+    "MAP_RESET": "Le serveur a rejeté une modification de cette mindmap et a rechargé son dernier état enregistré.",
     "MAP_SYNCING": "Chargement de la mindmap…",
     "INVALID_MODIFICATION_SECRET": "Le lien de modification est invalide. La mindmap s'ouvre en lecture seule.",
     "MAP_UPDATE_SUCCESS": "Mise à jour réussie de la carte heuristique !",
@@ -271,6 +276,7 @@
       "IMPORT_ERROR": "La Mindmap n'a pas pu être importée !",
       "IMPORT_NEWER_VERSION": "Une version plus récente de TeamMapper a créé ce fichier de carte mentale. Mettez TeamMapper à jour pour l'importer.",
       "AI_MERMAID_ERROR": "Mermaid n'a pas pu être généré",
+      "PICTOGRAMS_ERROR": "Les pictogrammes n'ont pas pu être chargés. Veuillez réessayer plus tard.",
       "IMAGE_STORAGE_FULL": "Le stockage d'images de cette carte mentale est plein. Une image retirée libère sa place dans les 7 jours suivant son téléversement.",
       "IMAGE_UPLOAD_ERROR": "L'image n'a pas pu être téléversée.",
       "DELETE_MAP_ERROR": "La carte n'a pas pu être supprimée.",

@@ -77,11 +77,6 @@ class ConfigService {
     return parseInt(this.getValue('DELETE_AFTER_DAYS', false) || '30')
   }
 
-  public isAiEnabled(): boolean {
-    const value = this.getValue('AI_ENABLED', false)
-    return value?.toLowerCase() === 'true'
-  }
-
   /**
    * Reads WS_TRUST_PROXY: `true` trusts every proxy, a positive integer
    * trusts that many hops, anything else trusts none.
@@ -98,29 +93,14 @@ class ConfigService {
     return value?.toLowerCase() === 'true'
   }
 
-  public isArrowsEnabled(): boolean {
-    const value = this.getValue('FEATURE_ARROWS', false)
-    return value?.toLowerCase() === 'true'
-  }
-
-  /** Target of the imprint link; null when `IMPRINT_URL` is unset or blank. */
-  public getImprintUrl(): string | null {
-    return this.getValue('IMPRINT_URL', false)?.trim() || null
-  }
-
-  /** Target of the privacy link; null when `PRIVACY_URL` is unset or blank. */
-  public getPrivacyUrl(): string | null {
-    return this.getValue('PRIVACY_URL', false)?.trim() || null
-  }
-
-  /** Upstream the /arasaac/api proxy forwards pictogram searches to. */
+  /** ARASAAC search API that the /arasaac/api/pictograms endpoint calls. */
   public getPictogramApiUrl(): string {
     return (
       this.getValue('PICTOGRAM_API_URL', false) || 'https://api.arasaac.org/api'
     )
   }
 
-  /** Upstream the /arasaac/images proxy forwards pictogram images to. */
+  /** ARASAAC image server that the /arasaac/images/pictograms endpoint calls. */
   public getPictogramImagesUrl(): string {
     return (
       this.getValue('PICTOGRAM_IMAGES_URL', false) ||
@@ -205,11 +185,6 @@ class ConfigService {
 
   public getDuplicateMapRateWindowMs(): number {
     return this.parsePositiveInt('DUPLICATE_MAP_RATE_WINDOW_MS', 60_000)
-  }
-
-  /** Duplication stops when stored images across all maps would exceed 1 GB. */
-  public getDuplicateMapMaxImageBytes(): number {
-    return this.parsePositiveInt('DUPLICATE_MAP_MAX_IMAGE_BYTES', 1_000_000_000)
   }
 
   private parsePositiveInt(key: string, fallback: number): number {
