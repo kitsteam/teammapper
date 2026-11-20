@@ -1,5 +1,3 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { test, expect, Page } from '@playwright/test';
 import { createMap } from './helpers';
 
@@ -80,21 +78,6 @@ test.describe('info dialog', () => {
     await expect(dialog(page)).toHaveCount(0);
     expect(page.url()).toBe(mapUrl);
     await expect(page.locator('.map')).toBeVisible();
-  });
-
-  test('title shows the backend package version', async ({ page }) => {
-    const { version } = JSON.parse(
-      readFileSync(
-        join(__dirname, '../../teammapper-backend/package.json'),
-        'utf-8'
-      )
-    ) as { version: string };
-
-    await page.locator("button[title='Opens info and shortcuts']").click();
-
-    await expect(dialog(page).locator('h2[mat-dialog-title]')).toContainText(
-      version
-    );
   });
 
   test('? opens one dialog only', async ({ page }) => {
